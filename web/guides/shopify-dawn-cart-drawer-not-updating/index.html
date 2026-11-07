@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopify Dawn cart drawer not updating: CI test against /cart.js</title>
+<meta name="description" content="Why the Dawn cart drawer can show a stale cart while /cart.js has the item, with a Playwright check and a CI recipe.">
+<link rel="canonical" href="https://marketcart-ci.pages.dev/guides/shopify-dawn-cart-drawer-not-updating/">
+<meta name="robots" content="index,follow">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Shopify Dawn cart drawer not updating: CI test against /cart.js","description":"Why the Dawn cart drawer can show a stale cart while /cart.js has the item, with a Playwright check and a CI recipe.","url":"https://marketcart-ci.pages.dev/guides/shopify-dawn-cart-drawer-not-updating/","datePublished":"2026-11-07","dateModified":"2026-11-07","about":["Shopify themes","Playwright","continuous integration"]}</script>
+<style>
+:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#5c5c57;--line:#e3e2dc;--card:#fff;--accent:#1f5fbf;--code:#f1f0ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 64px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:32px}
+a{color:var(--accent)}code,pre{background:var(--code);border-radius:6px;font:13px/1.5 ui-monospace,Consolas,monospace}code{padding:1px 5px}pre{padding:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}.tw{overflow-x:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0}.muted{color:var(--muted)}
+</style>
+</head>
+<body><main>
+<p class="muted"><a href="/">MarketCart CI</a> › Guides</p>
+<h1>Shopify Dawn cart drawer not updating: catch it in CI against /cart.js</h1>
+<p>The shopper clicks <em>Add to cart</em>, Shopify stores the item (<code>/cart.js</code> has it), but the Dawn cart drawer still says “Your cart is empty”, keeps the old quantity, or the header count stays at 0. The request succeeded, so most smoke tests pass. This page shows why it happens, a 30-line Playwright check you can run yourself, and how to run the same check on every theme change.</p>
+<h2>Why the drawer goes stale</h2>
+<p>Dawn's product form posts to <code>/cart/add</code> and asks Shopify to return the re-rendered <code>cart-drawer</code> and <code>cart-icon-bubble</code> sections in the same response; the drawer then swaps that HTML in. If a customization, an app script or a renamed section breaks that swap, the stored cart and the visible cart diverge. A check that only looks at the HTTP status, or that navigates to <code>/cart</code> (rendered fresh by the server), will not see it.</p>
+<h2>Reproduce it in one minute</h2>
+<p>Our public synthetic store has a planted version of this bug: <a href="https://marketcart-fixture.pages.dev/k/dawn16-drawer/s/stale-drawer/products/linen-shirt?variant=4101&amp;country=IE">stale drawer (Dawn 16.1.1 markup)</a> and the <a href="https://marketcart-fixture.pages.dev/k/dawn16-drawer/s/healthy/products/linen-shirt?variant=4101&amp;country=IE">healthy twin</a>. Add the shirt in both and compare the drawer with <code>/cart.js</code>.</p>
+<h2>Minimal Playwright check</h2>
+<pre><code>// npm i -D playwright-core &amp;&amp; npx playwright-core install chromium-headless-shell
+import { chromium } from 'playwright-core';
+
+const url = process.argv[2]; // https://&lt;your-store&gt;/products/&lt;handle&gt;?variant=&lt;id&gt;
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto(url);
+const added = page.waitForResponse((r) =&gt; /\/cart\/add(\.js)?$/.test(new URL(r.url()).pathname));
+await page.click('product-form button[name=&quot;add&quot;]');
+await added;
+await page.waitForTimeout(800); // let the theme re-render the drawer
+
+const stored = await page.evaluate(async () =&gt; (await fetch(window.Shopify.routes.root + 'cart.js')).json());
+const visible = await page.evaluate(() =&gt; {
+  const drawer = document.querySelector('cart-drawer');
+  const open = !!drawer &amp;&amp; (drawer.classList.contains('active') || drawer.hasAttribute('open'));
+  const rows = drawer ? [...drawer.querySelectorAll('.cart-item')].filter((r) =&gt; r.getClientRects().length) : [];
+  return { open, lines: rows.length, qty: rows.map((r) =&gt; Number(r.querySelector('input.quantity__input')?.value)) };
+});
+const ok = visible.open &amp;&amp; visible.lines === stored.items.length &amp;&amp;
+  stored.items.every((it, i) =&gt; visible.qty[i] === it.quantity);
+console.log({ storedLines: stored.items.length, storedQty: stored.items.map((i) =&gt; i.quantity), visible });
+process.exitCode = ok ? 0 : 1; // 1 = the drawer shows something other than what Shopify stored
+await browser.close();</code></pre>
+<p>Expected on the healthy page: <code>visible: { open: true, lines: 1, qty: [1] }</code>, exit 0. On the stale page: <code>storedLines: 1</code> but <code>visible.lines: 0</code>, exit 1.</p>
+<h2>Same check with MarketCart CI</h2>
+<pre><code>git clone https://github.com/paolomangiadev/marketcart-ci && cd marketcart-ci
+npm ci && npx playwright-core install chromium-headless-shell
+node integrations/cli/marketcart.ts demo</code></pre>
+<p>Actual output for the stale case: <code>REGRESSION — stored 1 line(s), visible 0 line(s) in drawer; stored line Linen Shirt (Red / M, variant 4101) not visible</code>. MarketCart also compares variant, quantity, line price, currency of the market the session actually got, the header badge and the total, and returns JSON plus an exit code (0 PASS, 1 REGRESSION, 2 inconclusive).</p>
+<p>In GitHub Actions:</p>
+<pre><code>- uses: paolomangiadev/marketcart-ci@v0
+  with:
+    mode: demo   # or mode: remote with your cases.json and a license secret</code></pre>
+<h2>Tested versions</h2>
+<div class="tw"><table><thead><tr><th>Theme / surface</th><th>Synthetic fixture</th><th>Live Shopify store</th></tr></thead><tbody>
+<tr><td>Dawn 16.1.1, cart drawer</td><td>11/11 cases as expected (incl. stale drawer, stale badge)</td><td>Not yet verified live</td></tr>
+<tr><td>Dawn 16.1.1, cart page / notification</td><td>10/10</td><td>Verified on a development store (paced suite)</td></tr>
+<tr><td>Dawn 15.4.1, drawer and page</td><td>21/21</td><td>Not verified live</td></tr>
+</tbody></table></div>
+<h2>Pitfalls</h2>
+<ul><li>Checking <code>/cart</code> instead of the drawer hides the bug: the cart page is rendered fresh by the server.</li>
+<li>If the drawer does not auto-open, open it from the header icon the way a shopper would before reading it.</li>
+<li>Compare amounts in the session's market currency; never convert.</li>
+<li>Space tests out: Shopify answered HTTP 429 after about four cart cycles in under a minute on our development store. MarketCart waits 15 s between cart cycles per store and honours Retry-After.</li>
+<li>Never automate checkout or payment pages.</li></ul>
+<h2>Limits</h2>
+<p>Dawn-family and Horizon 4.4 markup only; other themes return UNSUPPORTED. The synthetic fixture is written by the same author as the engine, so it proves which bug classes are detected, not that every store behaves alike.</p>
+<div class="card"><strong>Try it:</strong> run the <a href="/#demo">free demo</a> (synthetic store, no account), check <a href="/#free-check">one case on your own store for free</a>, or use the <a href="https://github.com/paolomangiadev/marketcart-ci">open-source CLI and GitHub Action</a> locally. Hosted runs: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a> (30 days, no subscription).</div>
+<p class="muted">Updated 2026-11-07. Evidence: <a href="https://github.com/paolomangiadev/marketcart-ci/tree/main/evidence">repository evidence folder</a>.</p>
+</main></body></html>

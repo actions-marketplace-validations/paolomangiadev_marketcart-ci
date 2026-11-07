@@ -1,10 +1,13 @@
-// Browser runner: one isolated context per case, concurrency 1, bounded timeout, at most one retry (ERROR only).
+// Browser runner: one isolated context per case, concurrency 1, bounded timeout, at most one retry per case
+// (retryable ERROR, or HTTP 429 after the store's pacing delay), always in a fresh isolated context.
 // Runtime-neutral: takes a Playwright-compatible Browser (playwright-core locally, @cloudflare/playwright in the
 // hosted runner). Only type imports from playwright-core, so nothing here loads a browser runtime.
 
 import type { Browser, BrowserContext, Page } from 'playwright-core';
 import { classify, comparePair, totalMode, verifyMarket } from './assert.ts';
-import { DAWN_FAMILY, dawnAdapter, readPageContext, readStoredCart, readVisibleCart } from './adapters/dawn.ts';
+import { readPageContext, readStoredCart } from './adapters/dawn.ts';
+import { ADAPTERS, adapterForSchema, drawerIsOpen, readVisibleCartAny, type AdapterName } from './adapters/themes.ts';
+import { parseRetryAfter, type StorePacer } from './pacing.ts';
 import { shopifyCentsToIsoMinor } from './money.ts';
 import { allowRequest, assertCaseUrl, hostAuthorized, sanitizeUrl, SafetyError, type SafetyPolicy } from './safety.ts';
 import type { CaseResult, CaseSpec, Check, MarketObservation, PairSpec, Status, StoredCart, VisibleCart } from './types.ts';
@@ -30,6 +33,12 @@ export interface RunOptions {
   // cookie never crosses cases, so every case still starts from an empty, isolated cart. Never persisted.
   gateCookies?: Map<string, GateCookie[]>;
   inject?: FaultInjection;
+  // Per-store pacing (shared across jobs by the caller). Without a pacer, no waits are inserted.
+  pacer?: StorePacer;
+  deadlineAt?: number; // overall job deadline (epoch ms): a case that cannot START before it is BLOCKED, not hung
+  // 'inline' (default): runCase waits for the pacer and retries itself. 'none': caller owns pacing/retry, e.g. the
+  // hosted runner, which waits OUTSIDE the browser session and relaunches for the retry.
+  retry?: 'inline' | 'none';
 }
 
 interface Attempt {
@@ -41,15 +50,22 @@ interface Attempt {
   visible: VisibleCart | null;
   screenshot: string | null;
   retryable: boolean;
+  rateLimited: boolean;
+  retryAfterMs: number | null;
+  theme: { schema: string | null; version: string | null; adapter: AdapterName | null; surface: 'drawer' | 'cart-page' | null };
 }
 
 class Stop extends Error {
   status: Status;
   retryable: boolean;
-  constructor(status: Status, reason: string, retryable = false) {
+  rateLimited: boolean;
+  retryAfterMs: number | null;
+  constructor(status: Status, reason: string, retryable = false, rate?: { retryAfterMs: number | null }) {
     super(reason);
     this.status = status;
     this.retryable = retryable;
+    this.rateLimited = !!rate;
+    this.retryAfterMs = rate?.retryAfterMs ?? null;
   }
 }
 
@@ -120,6 +136,8 @@ async function attempt(browser: Browser, spec: CaseSpec, opts: RunOptions, timeo
   const blocked: string[] = [];
   const gate = { open: false };
   let passwordWall = false;
+  let theme: Attempt['theme'] = { schema: null, version: null, adapter: null, surface: null };
+  let adapter: AdapterName | null = null;
   let market: MarketObservation | null = null;
   let stored: StoredCart | null = null;
   let visible: VisibleCart | null = null;
@@ -196,7 +214,9 @@ async function attempt(browser: Browser, spec: CaseSpec, opts: RunOptions, timeo
       if (!hostAuthorized(landed.hostname, policy)) throw new Stop('UNSUPPORTED', `navigation left the owner-authorized domain (landed on ${landed.hostname})`);
       const code = resp?.status() ?? 0;
       const ctx = await page.evaluate(readPageContext);
-      if (code === 429 || ctx.challenge) throw new Stop('BLOCKED', `storefront blocked automation (HTTP ${code}${ctx.challenge ? ', challenge page' : ''})`);
+      if (i === 0) theme = { schema: ctx.themeSchema, version: ctx.themeVersion, adapter: adapterForSchema(ctx.themeSchema), surface: null };
+      if (code === 429) throw new Stop('BLOCKED', `storefront rate limited (HTTP 429)`, false, { retryAfterMs: parseRetryAfter(resp?.headers()['retry-after'], Date.now()) });
+      if (ctx.challenge) throw new Stop('BLOCKED', `storefront blocked automation (HTTP ${code}, challenge page)`);
       if (code >= 500) throw new Stop('ERROR', `product page HTTP ${code}`, true);
       if (code >= 400) throw new Stop('UNSUPPORTED', `product page HTTP ${code}`);
       if (i === 0) {
@@ -204,26 +224,29 @@ async function attempt(browser: Browser, spec: CaseSpec, opts: RunOptions, timeo
         checks.push({ name: 'market.verified', ok: market.verified, detail: `requested ${spec.market.country}/${spec.market.currency}; ${market.evidence}` });
         if (!market.verified) throw new Stop('UNSUPPORTED', `requested market ${spec.market.country}/${spec.market.currency} not verified in-session (observed ${ctx.country ?? 'null'}/${ctx.currency ?? 'null'})`);
         const pre = await page.evaluate(readStoredCart);
-        if (!pre.ok || !pre.body) throw new Stop(pre.status === 429 ? 'BLOCKED' : 'ERROR', `stored cart unreadable before add (HTTP ${pre.status})`, pre.status >= 500);
+        if (pre.status === 429) throw new Stop('BLOCKED', 'stored cart rate limited before add (HTTP 429)', false, { retryAfterMs: null });
+        if (!pre.ok || !pre.body) throw new Stop('ERROR', `stored cart unreadable before add (HTTP ${pre.status})`, pre.status >= 500);
         if (Number(pre.body.item_count ?? 0) !== 0) throw new Stop('ERROR', 'session not isolated: cart not empty before first add', true);
       }
-      const schema = (ctx.themeSchema ?? '').toLowerCase();
-      if (!DAWN_FAMILY.has(schema) || !ctx.hasProductForm) {
-        throw new Stop('UNSUPPORTED', `no supported adapter: theme schema "${ctx.themeSchema ?? 'unknown'}"${ctx.hasProductForm ? '' : ', no Dawn product form'}`);
+      const adapterName = adapterForSchema(ctx.themeSchema);
+      if (!adapterName || !ctx.hasProductForm) {
+        throw new Stop('UNSUPPORTED', `no supported adapter: theme schema "${ctx.themeSchema ?? 'unknown'}"${ctx.hasProductForm ? '' : ', no product form'}`);
       }
-      const selected = await page.inputValue(dawnAdapter.selectors.variantInput).catch(() => null);
+      adapter = adapterName;
+      const sel = ADAPTERS[adapterName].selectors;
+      const selected = await page.inputValue(sel.variantInput).catch(() => null);
       const preselected = selected !== null && Number(selected) === line.variantId;
       checks.push({ name: 'theme.variantSelection', ok: preselected, detail: `requested variant ${line.variantId}, product form selected ${selected ?? 'none'}` });
       if (line.quantity !== 1) {
-        const q = await page.$(dawnAdapter.selectors.quantityInput);
+        const q = await page.$(sel.quantityInput);
         if (!q) throw new Stop('UNSUPPORTED', 'quantity input not found; cannot request quantity > 1');
         await q.fill(String(line.quantity));
       }
       const respP = page.waitForResponse((r) => isAddPath(r.url()) && r.request().method() === 'POST', { timeout: 0 });
-      await page.click(dawnAdapter.selectors.addButton);
+      await page.click(sel.addButton);
       const addResp = await respP;
       const addCode = addResp.status();
-      if (addCode === 429) throw new Stop('BLOCKED', 'add-to-cart rate limited (HTTP 429)');
+      if (addCode === 429) throw new Stop('BLOCKED', 'add-to-cart rate limited (HTTP 429)', false, { retryAfterMs: parseRetryAfter(addResp.headers()['retry-after'], Date.now()) });
       if (addCode >= 500) throw new Stop('ERROR', `add-to-cart HTTP ${addCode}`, true);
       if (addCode >= 400) throw new Stop('UNSUPPORTED', `store rejected add-to-cart (HTTP ${addCode}); variant unavailable?`);
       await waitForQuiet(page, inflight);
@@ -231,30 +254,34 @@ async function attempt(browser: Browser, spec: CaseSpec, opts: RunOptions, timeo
     }
 
     const raw = await page.evaluate(readStoredCart);
-    if (!raw.ok || !raw.body) throw new Stop(raw.status === 429 ? 'BLOCKED' : 'ERROR', `stored cart unreadable (HTTP ${raw.status})`, raw.status >= 500);
+    if (raw.status === 429) throw new Stop('BLOCKED', 'stored cart rate limited (HTTP 429)', false, { retryAfterMs: null });
+    if (!raw.ok || !raw.body) throw new Stop('ERROR', `stored cart unreadable (HTTP ${raw.status})`, raw.status >= 500);
     stored = normalizeStored(raw.body);
 
+    // Surface: a theme that renders a cart drawer is tested ON the drawer. A stale or closed drawer is never
+    // replaced by a (server-rendered, healthy) cart page; only themes without a drawer are read on /cart.
+    const ad = adapter as AdapterName;
+    const sel = ADAPTERS[ad].selectors;
     let surface: 'drawer' | 'cart-page' = 'drawer';
-    if (await page.$(dawnAdapter.selectors.drawer)) {
-      const open = await page.evaluate(() => {
-        const d = document.querySelector('cart-drawer');
-        return !!d && (d.classList.contains('active') || d.hasAttribute('open'));
-      });
-      if (!open) {
-        await page.click(dawnAdapter.selectors.cartIcon).catch(() => {});
-        await page.waitForTimeout(400);
+    if (await page.$(sel.drawer)) {
+      const autoOpened = await page.evaluate(drawerIsOpen, ad);
+      checks.push({ name: 'surface.drawer.autoOpen', ok: true, detail: autoOpened ? 'drawer opened after add' : 'drawer stayed closed after add; opened from the header cart control' });
+      if (!autoOpened) {
+        await page.click(sel.drawerTrigger).catch(() => {});
+        await page.waitForTimeout(500);
       }
     } else {
       surface = 'cart-page';
       const root = await page.evaluate(readPageContext).then((c) => c.routesRoot);
       await page.goto(new URL(root + 'cart', page.url()).toString(), { waitUntil: 'domcontentloaded' });
     }
-    const rv = await page.evaluate(readVisibleCart, surface);
-    if (surface === 'drawer' && !rv.drawerOpen) throw new Stop('UNSUPPORTED', 'cart drawer could not be opened');
+    theme.surface = surface;
+    const rv = await page.evaluate(readVisibleCartAny, { surface, adapter: ad });
+    if (surface === 'drawer' && !rv.drawerOpen) throw new Stop('UNSUPPORTED', 'cart drawer present but could not be opened; drawer not verified (cart page not substituted)');
     const base = page.url();
     visible = {
       surface,
-      badgeDeclared: dawnAdapter.declaresBadge,
+      badgeDeclared: ADAPTERS[ad].declaresBadge,
       badgeCount: rv.badgeText === null ? null : Number.parseInt(rv.badgeText, 10),
       totalText: rv.totalText,
       lines: rv.lines.map((l) => {
@@ -266,7 +293,7 @@ async function attempt(browser: Browser, spec: CaseSpec, opts: RunOptions, timeo
         return { variantId, title: l.title, options: l.options, quantity: l.quantity === null ? null : Number.parseInt(l.quantity, 10), priceText: l.priceText };
       }),
     };
-    const verdict = classify(market!, spec.lines, stored, visible, { badge: spec.checks?.badge ?? dawnAdapter.declaresBadge, total: totalMode(spec.checks?.total) });
+    const verdict = classify(market!, spec.lines, stored, visible, { badge: spec.checks?.badge ?? ADAPTERS[ad].declaresBadge, total: totalMode(spec.checks?.total) });
     const allChecks = [...checks, ...verdict.checks];
     let status = verdict.status;
     let reason = verdict.reason;
@@ -276,21 +303,22 @@ async function attempt(browser: Browser, spec: CaseSpec, opts: RunOptions, timeo
       reason = `theme did not select the requested variant: ${selFail.detail}`;
     }
     const shot = status === 'PASS' ? null : await screenshot(page, spec.id, opts);
-    return { status, reason, checks: allChecks, market, stored, visible, screenshot: shot, retryable: false };
+    return { status, reason, checks: allChecks, market, stored, visible, screenshot: shot, retryable: false, rateLimited: false, retryAfterMs: null, theme };
   } catch (e) {
+    const base = { checks, market, stored, visible, theme, rateLimited: false, retryAfterMs: null as number | null };
     if (passwordWall && !(e instanceof Stop)) {
-      return { status: 'BLOCKED', reason: 'storefront is password-protected; supply its storefront password (never in URLs)', checks, market, stored, visible, screenshot: null, retryable: false };
+      return { ...base, status: 'BLOCKED', reason: 'storefront is password-protected; supply its storefront password (never in URLs)', screenshot: null, retryable: false };
     }
     if (timedOut) {
-      return { status: 'ERROR', reason: `case timeout after ${timeoutMs} ms`, checks, market, stored, visible, screenshot: null, retryable: true };
+      return { ...base, status: 'ERROR', reason: `case timeout after ${timeoutMs} ms`, screenshot: null, retryable: true };
     }
     if (e instanceof Stop) {
       const shot = page && !page.isClosed() ? await screenshot(page, spec.id, opts) : null;
-      return { status: e.status, reason: e.message, checks, market, stored, visible, screenshot: shot, retryable: e.retryable };
+      return { ...base, status: e.status, reason: e.message, screenshot: shot, retryable: e.retryable, rateLimited: e.rateLimited, retryAfterMs: e.retryAfterMs };
     }
-    if (e instanceof SafetyError) return { status: 'UNSUPPORTED', reason: `refused by safety policy: ${e.message}`, checks, market, stored, visible, screenshot: null, retryable: false };
+    if (e instanceof SafetyError) return { ...base, status: 'UNSUPPORTED', reason: `refused by safety policy: ${e.message}`, screenshot: null, retryable: false };
     const msg = (e as Error).message?.split('\n')[0] ?? String(e);
-    return { status: 'ERROR', reason: `engine error: ${msg}${blocked.length ? ` (blocked: ${blocked.slice(0, 3).join(', ')})` : ''}`, checks, market, stored, visible, screenshot: null, retryable: true };
+    return { ...base, status: 'ERROR', reason: `engine error: ${msg}${blocked.length ? ` (blocked: ${blocked.slice(0, 3).join(', ')})` : ''}`, screenshot: null, retryable: true };
   } finally {
     clearTimeout(timer);
     await context.close().catch(() => {});
@@ -311,15 +339,36 @@ async function screenshot(page: Page, id: string, opts: RunOptions): Promise<str
   }
 }
 
-export async function runCase(browser: Browser, spec: CaseSpec, opts: RunOptions): Promise<CaseResult> {
+// Should this attempt be retried (once, in a fresh context)? Retryable ERROR or a 429.
+export function retryWorthy(a: { status: Status; retryable?: boolean; rateLimited?: boolean }): boolean {
+  return (a.status === 'ERROR' && !!a.retryable) || (a.status === 'BLOCKED' && !!a.rateLimited);
+}
+
+function caseHost(spec: CaseSpec): string {
+  return new URL(spec.lines[0].url).hostname.toLowerCase();
+}
+
+function deadlineBlocked(spec: CaseSpec, opts: RunOptions, waitMs: number): Attempt {
+  return { status: 'BLOCKED', reason: `queued: store cooldown (${Math.ceil(waitMs / 1000)} s) would start this case after the job deadline; credit released, retry later`, checks: [], market: null, stored: null, visible: null, screenshot: null, retryable: false, rateLimited: false, retryAfterMs: waitMs, theme: { schema: null, version: null, adapter: null, surface: null } };
+}
+
+// One attempt, paced: waits for the store's slot (outside any page), then runs, then feeds the outcome back.
+export async function pacedAttempt(browser: Browser, spec: CaseSpec, opts: RunOptions): Promise<{ a: Attempt; waitedMs: number; startedAt: string | null }> {
   const timeoutMs = Math.min(spec.timeoutMs ?? MAX_TIMEOUT_MS, MAX_TIMEOUT_MS);
-  const t0 = Date.now();
-  let a = await attempt(browser, spec, opts, timeoutMs);
-  let attempts = 1;
-  if (a.status === 'ERROR' && a.retryable) {
-    attempts = 2;
-    a = await attempt(browser, spec, opts, timeoutMs);
+  const host = caseHost(spec);
+  let waitedMs = 0;
+  if (opts.pacer) {
+    const slot = await opts.pacer.acquire(host, opts.deadlineAt);
+    if (!slot) return { a: deadlineBlocked(spec, opts, opts.pacer.waitMs(host)), waitedMs: 0, startedAt: null };
+    waitedMs = slot.waitedMs;
   }
+  const startedAt = new Date().toISOString();
+  const a = await attempt(browser, spec, opts, timeoutMs);
+  opts.pacer?.record(host, { rateLimited: a.rateLimited, retryAfterMs: a.retryAfterMs });
+  return { a, waitedMs, startedAt };
+}
+
+export function toCaseResult(spec: CaseSpec, opts: RunOptions, a: Attempt, attempts: number, durationMs: number, pacing: { waitedMs: number; rateLimited: boolean; retryAfterMs: number | null; attemptStarts: string[] }): CaseResult {
   return {
     caseId: spec.id,
     kind: 'single',
@@ -332,18 +381,48 @@ export async function runCase(browser: Browser, spec: CaseSpec, opts: RunOptions
     status: a.status,
     reason: a.reason,
     checks: a.checks,
-    durationMs: Date.now() - t0,
+    durationMs,
     attempts,
     cost: { measured: false, usd: 'UNKNOWN', basis: 'local runtime; not a provider invoice' },
     screenshot: a.screenshot,
     casesConsumed: 1,
+    theme: a.theme,
+    pacing,
   };
+}
+
+export type { Attempt };
+
+export async function runCase(browser: Browser, spec: CaseSpec, opts: RunOptions): Promise<CaseResult> {
+  const t0 = Date.now();
+  let r = await pacedAttempt(browser, spec, opts);
+  let attempts = 1;
+  let waited = r.waitedMs;
+  let anyRateLimited = r.a.rateLimited;
+  let lastRetryAfter = r.a.retryAfterMs;
+  const starts = r.startedAt ? [r.startedAt] : [];
+  if (opts.retry !== 'none' && retryWorthy(r.a)) {
+    attempts = 2;
+    r = await pacedAttempt(browser, spec, opts); // fresh isolated context; a 429 is never a pass
+    waited += r.waitedMs;
+    anyRateLimited ||= r.a.rateLimited;
+    lastRetryAfter = r.a.retryAfterMs ?? lastRetryAfter;
+    if (r.startedAt) starts.push(r.startedAt);
+  }
+  const a = r.a;
+  return toCaseResult(spec, opts, a, attempts, Date.now() - t0, { waitedMs: waited, rateLimited: anyRateLimited, retryAfterMs: lastRetryAfter, attemptStarts: starts });
 }
 
 export async function runPair(browser: Browser, spec: PairSpec, opts: RunOptions): Promise<CaseResult> {
   const t0 = Date.now();
   const live = await runCase(browser, spec.live, opts);
   const candidate = await runCase(browser, spec.candidate, opts);
+  return pairResult(spec, opts, live, candidate, Date.now() - t0);
+}
+
+// Combines two completed single results (live, candidate) into the pair result. Used by runPair and by the hosted
+// runner, which runs the two halves in separate browser sessions with the store's pacing wait in between.
+export function pairResult(spec: PairSpec, opts: RunOptions, live: CaseResult, candidate: CaseResult, durationMs: number): CaseResult {
   const v = comparePair(live, candidate);
   return {
     caseId: spec.id,
@@ -357,7 +436,7 @@ export async function runPair(browser: Browser, spec: PairSpec, opts: RunOptions
     status: v.status,
     reason: v.reason,
     checks: v.checks,
-    durationMs: Date.now() - t0,
+    durationMs,
     attempts: live.attempts + candidate.attempts,
     cost: { measured: false, usd: 'UNKNOWN', basis: 'local runtime; not a provider invoice' },
     screenshot: candidate.screenshot ?? live.screenshot,

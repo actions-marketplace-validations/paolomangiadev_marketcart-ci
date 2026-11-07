@@ -1,12 +1,12 @@
 {
   "summary": {
-    "runId": "bench-20261107T141346Z",
-    "engineVersion": "0.1.0+49668598",
+    "runId": "bench-20261107T161307Z",
+    "engineVersion": "0.1.0+0a4e5cee",
     "evidenceClass": "synthetic-fixture",
     "node": "v25.2.1",
     "platform": "win32-x64",
-    "startedAt": "2026-11-07T14:13:46.836Z",
-    "wallMs": 28826,
+    "startedAt": "2026-11-07T16:13:08.514Z",
+    "wallMs": 29252,
     "total": 20,
     "correct": 20,
     "falsePass": 0,
@@ -14,7 +14,7 @@
     "regressionsDetected": 10,
     "secretsFound": [],
     "casesConsumed": 22,
-    "attempts": 23,
+    "attempts": 24,
     "accepted": true
   },
   "results": [
@@ -152,7 +152,7 @@
       "planted": "Storefront answers 429 with a bot-challenge interstitial; never PASS.",
       "expected": "BLOCKED",
       "actual": "BLOCKED",
-      "reason": "storefront blocked automation (HTTP 429, challenge page)"
+      "reason": "storefront rate limited (HTTP 429)"
     },
     {
       "caseId": "C18",

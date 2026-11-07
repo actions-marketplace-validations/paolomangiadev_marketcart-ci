@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopify Horizon theme Playwright cart test (verified adapter)</title>
+<meta name="description" content="Horizon 4.4.0 cart selectors, a minimal Playwright script and a verified adapter, with limits stated.">
+<link rel="canonical" href="https://marketcart-ci.pages.dev/guides/shopify-horizon-playwright-test/">
+<meta name="robots" content="index,follow">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Shopify Horizon theme Playwright cart test (verified adapter)","description":"Horizon 4.4.0 cart selectors, a minimal Playwright script and a verified adapter, with limits stated.","url":"https://marketcart-ci.pages.dev/guides/shopify-horizon-playwright-test/","datePublished":"2026-11-07","dateModified":"2026-11-07","about":["Shopify themes","Playwright","continuous integration"]}</script>
+<style>
+:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#5c5c57;--line:#e3e2dc;--card:#fff;--accent:#1f5fbf;--code:#f1f0ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 64px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:32px}
+a{color:var(--accent)}code,pre{background:var(--code);border-radius:6px;font:13px/1.5 ui-monospace,Consolas,monospace}code{padding:1px 5px}pre{padding:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}.tw{overflow-x:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0}.muted{color:var(--muted)}
+</style>
+</head>
+<body><main>
+<p class="muted"><a href="/">MarketCart CI</a> › Guides</p>
+<h1>Shopify Horizon theme: a Playwright cart test that reads the real drawer</h1>
+<p>Horizon (Shopify's newer theme, version 4.4.0 at the time of writing) uses different cart markup from Dawn, so Dawn selectors find nothing and a naive test passes or fails for the wrong reason. Below: the Horizon 4.4.0 selectors, a minimal Playwright script, and the adapter MarketCart CI ships.</p>
+<h2>Horizon 4.4.0 cart markup (from the official source)</h2>
+<div class="tw"><table><thead><tr><th>What</th><th>Selector</th></tr></thead><tbody>
+<tr><td>Add to cart</td><td><code>add-to-cart-component button[name="add"]</code> inside <code>product-form-component</code></td></tr>
+<tr><td>Selected variant</td><td><code>product-form-component input[name="id"]</code></td></tr>
+<tr><td>Cart drawer</td><td><code>theme-drawer#cart-drawer &gt; dialog</code> (open = <code>dialog.open</code>); trigger <code>[data-testid="cart-drawer-trigger"]</code></td></tr>
+<tr><td>Lines</td><td><code>tr.cart-items__table-row:not(.cart-items__nested-line)</code>; title <code>a.cart-items__title</code>; options <code>dl.cart-items__variants dd</code> (values end with “,&amp;nbsp;”)</td></tr>
+<tr><td>Quantity / price</td><td><code>input[name="updates[]"]</code> / <code>td.cart-items__price bdi</code></td></tr>
+<tr><td>Badge / total</td><td><code>.cart-bubble__text-count</code> / <code>.cart-totals__total-value</code></td></tr>
+</tbody></table></div>
+<h2>Minimal Playwright script</h2>
+<pre><code>// Horizon 4.4.0 selectors (checked against Shopify/horizon source)
+import { chromium } from 'playwright-core';
+
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto(process.argv[2]);
+const added = page.waitForResponse((r) =&gt; /\/cart\/add(\.js)?$/.test(new URL(r.url()).pathname));
+await page.click('add-to-cart-component button[name=&quot;add&quot;], product-form-component button[name=&quot;add&quot;]');
+await added;
+await page.waitForTimeout(800);
+
+const stored = await page.evaluate(async () =&gt; (await fetch(window.Shopify.routes.root + 'cart.js')).json());
+const dialog = page.locator('theme-drawer#cart-drawer dialog');
+if (await dialog.count()) {
+  // cart_type = drawer. If &quot;auto open&quot; is off, open it like a shopper would; never fall back to /cart.
+  if (!(await dialog.evaluate((d) =&gt; d.open))) await page.click('[data-testid=&quot;cart-drawer-trigger&quot;]');
+} else {
+  await page.goto(new URL('cart', page.url()).href); // cart_type = page: the cart page is the real surface
+}
+const visible = await page.evaluate(() =&gt; {
+  const root = document.querySelector('theme-drawer#cart-drawer dialog[open]') ?? document.querySelector('main');
+  return [...root.querySelectorAll('tr.cart-items__table-row:not(.cart-items__nested-line)')].map((row) =&gt; ({
+    title: row.querySelector('a.cart-items__title')?.textContent?.trim(),
+    options: [...row.querySelectorAll('dl.cart-items__variants dd')].map((d) =&gt; d.textContent.replace(/[,\u00a0\s]+$/u, '').trim()),
+    qty: Number(row.querySelector('input[name=&quot;updates[]&quot;]')?.value),
+    price: row.querySelector('td.cart-items__price bdi')?.textContent?.trim(),
+  }));
+});
+console.log({ stored: stored.items.map((i) =&gt; [i.variant_title, i.quantity, i.final_line_price]), visible,
+  badge: await page.locator('.cart-bubble__text-count').textContent(),
+  total: await page.locator('.cart-totals__total-value').first().textContent() });
+await browser.close();</code></pre>
+<h2>Expected and actual output</h2>
+<p>On our synthetic Horizon skins (<a href="https://marketcart-fixture.pages.dev/k/horizon44-drawer/s/healthy/products/linen-shirt?variant=4101&amp;country=IE">drawer</a>, <a href="https://marketcart-fixture.pages.dev/k/horizon44-page/s/healthy/products/linen-shirt?variant=4101&amp;country=IE">cart page</a>) the MarketCart Horizon adapter classified 21/21 cases as expected: healthy → PASS; wrong variant, clamped quantity, wrong amount, wrong currency sign, stored currency mismatch, stale drawer, stale badge, stale quantity → REGRESSION; required total missing and unserved market → UNSUPPORTED. Example REGRESSION reason: <code>stored 1 line(s), visible 0 line(s) in drawer</code>.</p>
+<h2>Tested versions and what is not verified</h2>
+<ul><li>Horizon 4.4.0 markup: checked against the official theme source and covered by the synthetic fixture matrix.</li>
+<li><strong>Live Horizon store: not yet verified.</strong> Until a live run is recorded, treat Horizon support as fixture-verified only.</li>
+<li>Horizon-based sibling themes are not whitelisted; they return UNSUPPORTED until their markup is checked.</li></ul>
+<h2>Pitfalls</h2>
+<ul><li>The drawer is a native <code>&lt;dialog&gt;</code>: rows exist in the DOM even when it is closed. Check <code>dialog.open</code> before reading.</li>
+<li>With <em>auto-open cart drawer</em> disabled, open it from the header trigger; do not read <code>/cart</code> instead.</li>
+<li>Option values carry a trailing comma and non-breaking space; strip them before comparing with <code>variant_title</code>.</li>
+<li>Theme setting <code>cart_type</code> decides the surface: drawer, or a link to <code>/cart</code>.</li>
+<li>Pace your runs (15 s per store between cart cycles in MarketCart) to avoid HTTP 429.</li></ul>
+<div class="card"><strong>Try it:</strong> run the <a href="/#demo">free demo</a> (synthetic store, no account), check <a href="/#free-check">one case on your own store for free</a>, or use the <a href="https://github.com/paolomangiadev/marketcart-ci">open-source CLI and GitHub Action</a> locally. Hosted runs: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a> (30 days, no subscription).</div>
+<p class="muted">Updated 2026-11-07. Evidence: <a href="https://github.com/paolomangiadev/marketcart-ci/tree/main/evidence">repository evidence folder</a>.</p>
+</main></body></html>

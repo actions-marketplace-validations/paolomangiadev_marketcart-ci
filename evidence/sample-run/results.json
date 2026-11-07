@@ -1,12 +1,12 @@
 {
   "summary": {
-    "runId": "bench-20261107T141346Z",
-    "engineVersion": "0.1.0+49668598",
+    "runId": "bench-20261107T161307Z",
+    "engineVersion": "0.1.0+0a4e5cee",
     "evidenceClass": "synthetic-fixture",
     "node": "v25.2.1",
     "platform": "win32-x64",
-    "startedAt": "2026-11-07T14:13:46.836Z",
-    "wallMs": 28826,
+    "startedAt": "2026-11-07T16:13:08.514Z",
+    "wallMs": 29252,
     "total": 20,
     "correct": 20,
     "falsePass": 0,
@@ -14,17 +14,17 @@
     "regressionsDetected": 10,
     "secretsFound": [],
     "casesConsumed": 22,
-    "attempts": 23,
+    "attempts": 24,
     "accepted": true
   },
   "results": [
     {
       "caseId": "C01",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/healthy/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/healthy/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -98,6 +98,11 @@
           "detail": "requested variant 4101, product form selected 4101"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4101 stored"
@@ -153,7 +158,7 @@
           "detail": "stored total 2400, visible \"€24.00\" -> 2400"
         }
       ],
-      "durationMs": 881,
+      "durationMs": 1056,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -162,15 +167,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:08.515Z"
+        ]
+      },
       "expected": "PASS"
     },
     {
       "caseId": "C02",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/healthy/products/linen-shirt?variant=4102&country=IE"
+          "http://fixture.local:53777/s/healthy/products/linen-shirt?variant=4102&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -244,6 +263,11 @@
           "detail": "requested variant 4102, product form selected 4102"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4102 stored"
@@ -299,7 +323,7 @@
           "detail": "stored total 2400, visible \"€24.00\" -> 2400"
         }
       ],
-      "durationMs": 844,
+      "durationMs": 840,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -308,15 +332,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:09.571Z"
+        ]
+      },
       "expected": "PASS"
     },
     {
       "caseId": "C03",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/healthy/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/healthy/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -390,6 +428,11 @@
           "detail": "requested variant 4101, product form selected 4101"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4101 stored"
@@ -445,7 +488,7 @@
           "detail": "stored total 7200, visible \"€72.00\" -> 7200"
         }
       ],
-      "durationMs": 839,
+      "durationMs": 866,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -454,15 +497,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:10.411Z"
+        ]
+      },
       "expected": "PASS"
     },
     {
       "caseId": "C04",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/healthy/products/linen-shirt?variant=4101&country=JP"
+          "http://fixture.local:53777/s/healthy/products/linen-shirt?variant=4101&country=JP"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -537,6 +594,11 @@
           "detail": "requested variant 4101, product form selected 4101"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4101 stored"
@@ -592,7 +654,7 @@
           "detail": "stored total 7800, visible \"¥7,800\" -> 7800"
         }
       ],
-      "durationMs": 840,
+      "durationMs": 858,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -601,15 +663,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:11.277Z"
+        ]
+      },
       "expected": "PASS"
     },
     {
       "caseId": "C05",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/stale-drawer/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/stale-drawer/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -666,6 +742,11 @@
           "detail": "requested variant 4101, product form selected 4101"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4101 stored"
@@ -701,7 +782,7 @@
           "detail": "no total shown in drawer; total not checked (optional)"
         }
       ],
-      "durationMs": 891,
+      "durationMs": 898,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -710,15 +791,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:12.136Z"
+        ]
+      },
       "expected": "REGRESSION"
     },
     {
       "caseId": "C06",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/stale-badge/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/stale-badge/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -792,6 +887,11 @@
           "detail": "requested variant 4101, product form selected 4101"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4101 stored"
@@ -847,7 +947,7 @@
           "detail": "stored total 2400, visible \"€24.00\" -> 2400"
         }
       ],
-      "durationMs": 898,
+      "durationMs": 882,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -856,15 +956,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:13.033Z"
+        ]
+      },
       "expected": "REGRESSION"
     },
     {
       "caseId": "C07",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/stale-qty/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/stale-qty/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -938,6 +1052,11 @@
           "detail": "requested variant 4101, product form selected 4101"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4101 stored"
@@ -993,7 +1112,7 @@
           "detail": "stored total 4800, visible \"€48.00\" -> 4800"
         }
       ],
-      "durationMs": 901,
+      "durationMs": 892,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -1002,15 +1121,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:13.916Z"
+        ]
+      },
       "expected": "REGRESSION"
     },
     {
       "caseId": "C08",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/wrong-variant/products/linen-shirt?variant=4102&country=IE"
+          "http://fixture.local:53777/s/wrong-variant/products/linen-shirt?variant=4102&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -1084,6 +1217,11 @@
           "detail": "requested variant 4102, product form selected 4102"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": false,
           "detail": "requested variant 4102 not in stored cart (stored: 4101)"
@@ -1139,7 +1277,7 @@
           "detail": "stored total 2400, visible \"€24.00\" -> 2400"
         }
       ],
-      "durationMs": 867,
+      "durationMs": 885,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -1148,16 +1286,30 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:14.808Z"
+        ]
+      },
       "expected": "REGRESSION"
     },
     {
       "caseId": "C09",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/drop-second/products/linen-shirt?variant=4101&country=IE",
-          "http://fixture.local:63788/s/drop-second/products/socks?variant=6301&country=IE"
+          "http://fixture.local:53777/s/drop-second/products/linen-shirt?variant=4101&country=IE",
+          "http://fixture.local:53777/s/drop-second/products/socks?variant=6301&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -1247,6 +1399,11 @@
           "detail": "requested variant 6301, product form selected 6301"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4101 stored"
@@ -1317,7 +1474,7 @@
           "detail": "stored total 3300, visible \"€33.00\" -> 3300"
         }
       ],
-      "durationMs": 1648,
+      "durationMs": 1664,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -1326,15 +1483,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:15.693Z"
+        ]
+      },
       "expected": "REGRESSION"
     },
     {
       "caseId": "C10",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/qty-clamp/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/qty-clamp/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -1408,6 +1579,11 @@
           "detail": "requested variant 4101, product form selected 4101"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4101 stored"
@@ -1463,7 +1639,7 @@
           "detail": "stored total 4800, visible \"€48.00\" -> 4800"
         }
       ],
-      "durationMs": 893,
+      "durationMs": 911,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -1472,15 +1648,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:17.358Z"
+        ]
+      },
       "expected": "REGRESSION"
     },
     {
       "caseId": "C11",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/cart-currency-usd/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/cart-currency-usd/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -1563,6 +1753,11 @@
           "detail": "requested variant 4101, product form selected 4101"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4101 stored"
@@ -1618,7 +1813,7 @@
           "detail": "stored total 2600, visible \"$26.00\" -> 2600"
         }
       ],
-      "durationMs": 895,
+      "durationMs": 873,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -1627,15 +1822,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:18.269Z"
+        ]
+      },
       "expected": "REGRESSION"
     },
     {
       "caseId": "C12",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/visible-wrong-symbol/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/visible-wrong-symbol/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -1718,6 +1927,11 @@
           "detail": "requested variant 4101, product form selected 4101"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4101 stored"
@@ -1773,7 +1987,7 @@
           "detail": "stored total 2400, visible \"$24.00\" -> 2400"
         }
       ],
-      "durationMs": 879,
+      "durationMs": 885,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -1782,15 +1996,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:19.142Z"
+        ]
+      },
       "expected": "REGRESSION"
     },
     {
       "caseId": "C13",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/visible-wrong-amount/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/visible-wrong-amount/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -1864,6 +2092,11 @@
           "detail": "requested variant 4101, product form selected 4101"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 4101 stored"
@@ -1919,7 +2152,7 @@
           "detail": "stored total 2400, visible \"€24.00\" -> 2400"
         }
       ],
-      "durationMs": 835,
+      "durationMs": 866,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -1928,15 +2161,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:20.027Z"
+        ]
+      },
       "expected": "REGRESSION"
     },
     {
       "caseId": "C14",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/healthy/products/wool-coat?variant=5201&country=DE"
+          "http://fixture.local:53777/s/healthy/products/wool-coat?variant=5201&country=DE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -2007,6 +2254,11 @@
           "detail": "requested variant 5201, product form selected 5201"
         },
         {
+          "name": "surface.drawer.autoOpen",
+          "ok": true,
+          "detail": "drawer opened after add"
+        },
+        {
           "name": "stored.variant",
           "ok": true,
           "detail": "variant 5201 stored"
@@ -2062,7 +2314,7 @@
           "detail": "stored total 123456, visible \"1.234,56 €\" -> 123456"
         }
       ],
-      "durationMs": 860,
+      "durationMs": 853,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -2071,16 +2323,30 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": "drawer"
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:20.893Z"
+        ]
+      },
       "expected": "PASS"
     },
     {
       "caseId": "C15",
       "kind": "pair",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/healthy/products/linen-shirt?variant=4101&country=IE",
-          "http://fixture.local:63788/s/healthy-candidate/products/linen-shirt?variant=4101&country=IE&preview_theme_id=fixture-candidate"
+          "http://fixture.local:53777/s/healthy/products/linen-shirt?variant=4101&country=IE",
+          "http://fixture.local:53777/s/healthy-candidate/products/linen-shirt?variant=4101&country=IE&preview_theme_id=fixture-candidate"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -2162,10 +2428,10 @@
         {
           "caseId": "C15-live",
           "kind": "single",
-          "engineVersion": "0.1.0+49668598",
+          "engineVersion": "0.1.0+0a4e5cee",
           "source": {
             "urls": [
-              "http://fixture.local:63788/s/healthy/products/linen-shirt?variant=4101&country=IE"
+              "http://fixture.local:53777/s/healthy/products/linen-shirt?variant=4101&country=IE"
             ],
             "evidenceClass": "synthetic-fixture"
           },
@@ -2239,6 +2505,11 @@
               "detail": "requested variant 4101, product form selected 4101"
             },
             {
+              "name": "surface.drawer.autoOpen",
+              "ok": true,
+              "detail": "drawer opened after add"
+            },
+            {
               "name": "stored.variant",
               "ok": true,
               "detail": "variant 4101 stored"
@@ -2294,7 +2565,7 @@
               "detail": "stored total 4800, visible \"€48.00\" -> 4800"
             }
           ],
-          "durationMs": 864,
+          "durationMs": 863,
           "attempts": 1,
           "cost": {
             "measured": false,
@@ -2302,15 +2573,29 @@
             "basis": "local runtime; not a provider invoice"
           },
           "screenshot": null,
-          "casesConsumed": 1
+          "casesConsumed": 1,
+          "theme": {
+            "schema": "Dawn",
+            "version": null,
+            "adapter": "dawn",
+            "surface": "drawer"
+          },
+          "pacing": {
+            "waitedMs": 0,
+            "rateLimited": false,
+            "retryAfterMs": null,
+            "attemptStarts": [
+              "2026-11-07T16:13:21.746Z"
+            ]
+          }
         },
         {
           "caseId": "C15-candidate",
           "kind": "single",
-          "engineVersion": "0.1.0+49668598",
+          "engineVersion": "0.1.0+0a4e5cee",
           "source": {
             "urls": [
-              "http://fixture.local:63788/s/healthy-candidate/products/linen-shirt?variant=4101&country=IE&preview_theme_id=fixture-candidate"
+              "http://fixture.local:53777/s/healthy-candidate/products/linen-shirt?variant=4101&country=IE&preview_theme_id=fixture-candidate"
             ],
             "evidenceClass": "synthetic-fixture"
           },
@@ -2384,6 +2669,11 @@
               "detail": "requested variant 4101, product form selected 4101"
             },
             {
+              "name": "surface.drawer.autoOpen",
+              "ok": true,
+              "detail": "drawer opened after add"
+            },
+            {
               "name": "stored.variant",
               "ok": true,
               "detail": "variant 4101 stored"
@@ -2439,7 +2729,7 @@
               "detail": "stored total 4800, visible \"€48.00\" -> 4800"
             }
           ],
-          "durationMs": 857,
+          "durationMs": 859,
           "attempts": 1,
           "cost": {
             "measured": false,
@@ -2447,7 +2737,21 @@
             "basis": "local runtime; not a provider invoice"
           },
           "screenshot": null,
-          "casesConsumed": 1
+          "casesConsumed": 1,
+          "theme": {
+            "schema": "Dawn",
+            "version": null,
+            "adapter": "dawn",
+            "surface": "drawer"
+          },
+          "pacing": {
+            "waitedMs": 0,
+            "rateLimited": false,
+            "retryAfterMs": null,
+            "attemptStarts": [
+              "2026-11-07T16:13:22.609Z"
+            ]
+          }
         }
       ],
       "expected": "PASS"
@@ -2455,11 +2759,11 @@
     {
       "caseId": "C16",
       "kind": "pair",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/healthy/products/linen-shirt?variant=4101&country=IE",
-          "http://fixture.local:63788/s/stale-drawer/products/linen-shirt?variant=4101&country=IE&preview_theme_id=fixture-candidate"
+          "http://fixture.local:53777/s/healthy/products/linen-shirt?variant=4101&country=IE",
+          "http://fixture.local:53777/s/stale-drawer/products/linen-shirt?variant=4101&country=IE&preview_theme_id=fixture-candidate"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -2505,7 +2809,7 @@
       "status": "REGRESSION",
       "reason": "candidate regressed (live PASS)",
       "checks": [],
-      "durationMs": 1716,
+      "durationMs": 1739,
       "attempts": 2,
       "cost": {
         "measured": false,
@@ -2518,10 +2822,10 @@
         {
           "caseId": "C16-live",
           "kind": "single",
-          "engineVersion": "0.1.0+49668598",
+          "engineVersion": "0.1.0+0a4e5cee",
           "source": {
             "urls": [
-              "http://fixture.local:63788/s/healthy/products/linen-shirt?variant=4101&country=IE"
+              "http://fixture.local:53777/s/healthy/products/linen-shirt?variant=4101&country=IE"
             ],
             "evidenceClass": "synthetic-fixture"
           },
@@ -2595,6 +2899,11 @@
               "detail": "requested variant 4101, product form selected 4101"
             },
             {
+              "name": "surface.drawer.autoOpen",
+              "ok": true,
+              "detail": "drawer opened after add"
+            },
+            {
               "name": "stored.variant",
               "ok": true,
               "detail": "variant 4101 stored"
@@ -2650,7 +2959,7 @@
               "detail": "stored total 2400, visible \"€24.00\" -> 2400"
             }
           ],
-          "durationMs": 832,
+          "durationMs": 846,
           "attempts": 1,
           "cost": {
             "measured": false,
@@ -2658,15 +2967,29 @@
             "basis": "local runtime; not a provider invoice"
           },
           "screenshot": null,
-          "casesConsumed": 1
+          "casesConsumed": 1,
+          "theme": {
+            "schema": "Dawn",
+            "version": null,
+            "adapter": "dawn",
+            "surface": "drawer"
+          },
+          "pacing": {
+            "waitedMs": 0,
+            "rateLimited": false,
+            "retryAfterMs": null,
+            "attemptStarts": [
+              "2026-11-07T16:13:23.468Z"
+            ]
+          }
         },
         {
           "caseId": "C16-candidate",
           "kind": "single",
-          "engineVersion": "0.1.0+49668598",
+          "engineVersion": "0.1.0+0a4e5cee",
           "source": {
             "urls": [
-              "http://fixture.local:63788/s/stale-drawer/products/linen-shirt?variant=4101&country=IE&preview_theme_id=fixture-candidate"
+              "http://fixture.local:53777/s/stale-drawer/products/linen-shirt?variant=4101&country=IE&preview_theme_id=fixture-candidate"
             ],
             "evidenceClass": "synthetic-fixture"
           },
@@ -2723,6 +3046,11 @@
               "detail": "requested variant 4101, product form selected 4101"
             },
             {
+              "name": "surface.drawer.autoOpen",
+              "ok": true,
+              "detail": "drawer opened after add"
+            },
+            {
               "name": "stored.variant",
               "ok": true,
               "detail": "variant 4101 stored"
@@ -2758,7 +3086,7 @@
               "detail": "no total shown in drawer; total not checked (optional)"
             }
           ],
-          "durationMs": 884,
+          "durationMs": 893,
           "attempts": 1,
           "cost": {
             "measured": false,
@@ -2766,7 +3094,21 @@
             "basis": "local runtime; not a provider invoice"
           },
           "screenshot": null,
-          "casesConsumed": 1
+          "casesConsumed": 1,
+          "theme": {
+            "schema": "Dawn",
+            "version": null,
+            "adapter": "dawn",
+            "surface": "drawer"
+          },
+          "pacing": {
+            "waitedMs": 0,
+            "rateLimited": false,
+            "retryAfterMs": null,
+            "attemptStarts": [
+              "2026-11-07T16:13:24.314Z"
+            ]
+          }
         }
       ],
       "expected": "REGRESSION"
@@ -2774,10 +3116,10 @@
     {
       "caseId": "C17",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/challenge/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/challenge/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -2797,10 +3139,10 @@
       "stored": null,
       "visible": null,
       "status": "BLOCKED",
-      "reason": "storefront blocked automation (HTTP 429, challenge page)",
+      "reason": "storefront rate limited (HTTP 429)",
       "checks": [],
-      "durationMs": 99,
-      "attempts": 1,
+      "durationMs": 233,
+      "attempts": 2,
       "cost": {
         "measured": false,
         "usd": "UNKNOWN",
@@ -2808,15 +3150,30 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": null,
+        "version": null,
+        "adapter": null,
+        "surface": null
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": true,
+        "retryAfterMs": 60000,
+        "attemptStarts": [
+          "2026-11-07T16:13:25.208Z",
+          "2026-11-07T16:13:25.323Z"
+        ]
+      },
       "expected": "BLOCKED"
     },
     {
       "caseId": "C18",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/non-dawn/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/non-dawn/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -2858,15 +3215,29 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Debut",
+        "version": null,
+        "adapter": null,
+        "surface": null
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:25.441Z"
+        ]
+      },
       "expected": "UNSUPPORTED"
     },
     {
       "caseId": "C19",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/hang/products/linen-shirt?variant=4101&country=IE"
+          "http://fixture.local:53777/s/hang/products/linen-shirt?variant=4101&country=IE"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -2904,7 +3275,7 @@
           "detail": "requested variant 4101, product form selected 4101"
         }
       ],
-      "durationMs": 12019,
+      "durationMs": 12016,
       "attempts": 2,
       "cost": {
         "measured": false,
@@ -2913,15 +3284,30 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": null
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:25.574Z",
+          "2026-11-07T16:13:31.587Z"
+        ]
+      },
       "expected": "ERROR"
     },
     {
       "caseId": "C20",
       "kind": "single",
-      "engineVersion": "0.1.0+49668598",
+      "engineVersion": "0.1.0+0a4e5cee",
       "source": {
         "urls": [
-          "http://fixture.local:63788/s/no-market/products/linen-shirt?variant=4101&country=JP"
+          "http://fixture.local:53777/s/no-market/products/linen-shirt?variant=4101&country=JP"
         ],
         "evidenceClass": "synthetic-fixture"
       },
@@ -2954,7 +3340,7 @@
           "detail": "requested JP/JPY; in-session window.Shopify.country=IE, window.Shopify.currency.active=EUR"
         }
       ],
-      "durationMs": 132,
+      "durationMs": 134,
       "attempts": 1,
       "cost": {
         "measured": false,
@@ -2963,6 +3349,20 @@
       },
       "screenshot": null,
       "casesConsumed": 1,
+      "theme": {
+        "schema": "Dawn",
+        "version": null,
+        "adapter": "dawn",
+        "surface": null
+      },
+      "pacing": {
+        "waitedMs": 0,
+        "rateLimited": false,
+        "retryAfterMs": null,
+        "attemptStarts": [
+          "2026-11-07T16:13:37.591Z"
+        ]
+      },
       "expected": "UNSUPPORTED"
     }
   ]

@@ -25,3 +25,10 @@ jobs:
       - uses: ./
         with:
           mode: demo
+  action-v0:
+    # the published major tag, as users reference it
+    runs-on: ubuntu-latest
+    steps:
+      - uses: paolomangiadev/marketcart-ci@v0
+        with:
+          mode: demo

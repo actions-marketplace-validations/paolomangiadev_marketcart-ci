@@ -25,6 +25,7 @@ export interface PageContext {
   country: string | null;
   currency: string | null;
   themeSchema: string | null;
+  themeVersion: string | null;
   hasProductForm: boolean;
   challenge: boolean;
   title: string;
@@ -33,7 +34,7 @@ export interface PageContext {
 
 // Runs inside the page. Must be self-contained.
 export function readPageContext(): PageContext {
-  const w = window as unknown as { Shopify?: { country?: string; currency?: { active?: string }; theme?: { schema_name?: string }; routes?: { root?: string } } };
+  const w = window as unknown as { Shopify?: { country?: string; currency?: { active?: string }; theme?: { schema_name?: string; schema_version?: string }; routes?: { root?: string } } };
   const title = document.title || '';
   const body = (document.body?.innerText || '').slice(0, 2000).toLowerCase();
   const challenge =
@@ -44,6 +45,7 @@ export function readPageContext(): PageContext {
     country: w.Shopify?.country ?? null,
     currency: w.Shopify?.currency?.active ?? null,
     themeSchema: w.Shopify?.theme?.schema_name ?? null,
+    themeVersion: w.Shopify?.theme?.schema_version ?? null,
     hasProductForm: !!document.querySelector('product-form form, form[action$="/cart/add"]'),
     challenge,
     title,

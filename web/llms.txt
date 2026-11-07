@@ -1,12 +1,14 @@
 # MarketCart CI
 
-> Cart parity checks for Shopify stores on Dawn-family themes. A real browser adds a product, then MarketCart CI compares the cart Shopify stored (/cart.js) with what the shopper sees (cart drawer or cart page): variant, quantity, line price, badge, total and the currency of the market the session actually got. JSON result plus exit code for CI. Open-source CLI and GitHub Action; hosted runs EUR 19 per 100 completed cases.
+> Cart parity checks for Shopify stores on Dawn-family themes and Horizon 4.4. A real browser adds a product, then MarketCart CI compares the cart Shopify stored (/cart.js) with what the shopper sees (cart drawer or cart page): variant, quantity, line price, badge, total and the currency of the market the session actually got. JSON result plus exit code for CI. Open-source CLI and GitHub Action; hosted runs EUR 19 per 100 completed cases.
 
 ## Docs
 - [Full text for LLMs](https://marketcart-ci.pages.dev/llms-full.txt): architecture, CLI/Action usage, JSON input/output, limits, pricing
 - [Repository and quickstart](https://github.com/paolomangiadev/marketcart-ci)
 - [Benchmark: 20 cases expected vs actual](https://marketcart-ci.pages.dev/#benchmark)
 - [Competitor matrix](https://marketcart-ci.pages.dev/#competitors)
+- [Guide: Shopify Dawn cart drawer not updating — CI test against /cart.js](https://marketcart-ci.pages.dev/guides/shopify-dawn-cart-drawer-not-updating/)
+- [Guide: Shopify Horizon theme Playwright cart test](https://marketcart-ci.pages.dev/guides/shopify-horizon-playwright-test/)
 
 ## Product
 - [Buy 100 hosted cases (EUR 19)](https://payhip.com/b/er1iY)

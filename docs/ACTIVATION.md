@@ -11,12 +11,12 @@ Thank you for buying a MarketCart CI pack. Your **license key** is shown on the 
 
 ## Scope and limits (read before running)
 
-- Shopify stores you own, running **Dawn** or a Dawn-family theme (Dawn, Refresh, Sense, Craft, Studio, Taste, Origin, Crave, Ride, Colorblock, Publisher, Spotlight, Trade). **Horizon and other themes return UNSUPPORTED** (credit released).
+- Shopify stores you own, running **Dawn** or a Dawn-family theme (Dawn, Refresh, Sense, Craft, Studio, Taste, Origin, Crave, Ride, Colorblock, Publisher, Spotlight, Trade) or **Horizon 4.4**. Other themes return UNSUPPORTED (credit released). Live-verified so far: Dawn 16.1.1 on the cart page; Dawn drawer and Horizon are verified on version-pinned synthetic markup, live verification pending.
 - Checks: requested variant and quantity vs the stored cart (`/cart.js`), stored vs visible cart (drawer or cart page), line prices, badge, total, and the **in-session market currency**. No currency conversion, ever.
 - Never visits checkout, account or payment pages. Never places orders.
 - Ownership proof is required per store: a meta tag in your theme `<head>` (step 2).
 - Password-protected (development / pre-launch) stores: pass the storefront password in the request body; it is used in memory only and never stored or logged.
-- Concurrency 1. Shopify rate-limits rapid cart traffic; a throttled case returns **BLOCKED** (released, not billed). Space large suites out.
+- Concurrency 1 and per-store pacing: 15 s between cart cycles, Shopify's Retry-After honoured, one retry in a fresh session. A throttled case that still fails returns **BLOCKED** (released, not billed). A job that cannot start a case within about 4.5 minutes returns it as BLOCKED (queued), released; resend those cases later.
 
 ## 1. Check the key
 

@@ -32,7 +32,7 @@ setResolver(dohResolver());
 
 interface RunnerNamespace {
   idFromName(name: string): unknown;
-  get(id: unknown): Pick<BrowserRunner, 'execute'>;
+  get(id: unknown): Pick<BrowserRunner, 'execute' | 'queueEstimate'>;
 }
 
 interface Env {
@@ -166,11 +166,13 @@ async function usedBrowserSeconds(env: Env): Promise<number | null> {
 
 // sessionMs = our own launch->close measurement of the Browser Run session (an upper bound of billed browser time;
 // Browser Run's usedBrowserTimeSeconds counter lags and is reconciled separately via /v1/stats).
-interface RunStats { wallMs: number; sessionMs: number; launchRetries: number }
+interface RunStats { wallMs: number; sessionMs: number; launchRetries: number; sessions?: number; waitedMs?: number }
+const JOB_DEADLINE_MS = 270_000; // a case that cannot START within this window comes back BLOCKED (queued), released
+const ADMISSION_MAX_WAIT_MS = 120_000; // refuse (429 + Retry-After) before reserving credits if the store is cooling down
 async function runOnRunner(env: Env, allowed: string[], items: RunnerItem[], passwords: Record<string, string> = {}, pauseMs = 0): Promise<{ value: CaseResult[]; stats: RunStats }> {
   const stub = env.RUNNER.get(env.RUNNER.idFromName('browser-runner'));
   try {
-    const r = await stub.execute({ allowed, items, passwords, pauseMs, engineVersion: ENGINE_VERSION });
+    const r = await stub.execute({ allowed, items, passwords, pauseMs, engineVersion: ENGINE_VERSION, deadlineAt: Date.now() + JOB_DEADLINE_MS, unpacedHosts: [env.FIXTURE_HOST] });
     return { value: r.results, stats: r.stats };
   } catch (e) {
     throw new HttpError(503, `browser runner unavailable: ${String((e as Error).message ?? e).slice(0, 160)}`);
@@ -334,7 +336,13 @@ async function paidJob(req: Request, env: Env, db: Db, key: string): Promise<Res
     }
   }
   const holder = `paid-${jobId}`;
-  if (!existing && !(await acquireLock(db, holder))) return json(429, { error: 'runner busy (concurrency 1), retry in a minute', retryAfterSeconds: 60 });
+  if (!existing) {
+    // Admission: a store still cooling down (pacing / recent 429) is reported BEFORE any credit is reserved.
+    const est = await env.RUNNER.get(env.RUNNER.idFromName('browser-runner')).queueEstimate(domains);
+    const maxWait = Math.max(0, ...Object.values(est));
+    if (maxWait > ADMISSION_MAX_WAIT_MS) return new Response(JSON.stringify({ error: 'store cooling down after rate limiting; nothing reserved', retryAfterSeconds: Math.ceil(maxWait / 1000) }), { status: 429, headers: { ...headers, 'retry-after': String(Math.ceil(maxWait / 1000)) } });
+  }
+  if (!existing && !(await acquireLock(db, holder))) return new Response(JSON.stringify({ error: 'runner busy (concurrency 1), retry in a minute', retryAfterSeconds: 60 }), { status: 429, headers: { ...headers, 'retry-after': '60' } });
   const started = Date.now();
   let launchRetries = 0;
   let sessionMs = 0;

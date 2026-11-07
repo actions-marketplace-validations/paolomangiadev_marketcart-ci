@@ -5,10 +5,10 @@ Canonical: https://marketcart-ci.pages.dev/ · Repository: https://github.com/pa
 ## What it does
 MarketCart CI checks that a Shopify cart shows what Shopify stored. For each case it opens the product page in an isolated real-browser session, adds the requested variant and quantity with the theme's own add-to-cart form, reads the stored cart from Shopify's Ajax API (/cart.js) independently of the page, then reads the visible cart (drawer, or the cart page when the theme has no drawer). It compares requested vs stored (variant, quantity, unexpected lines), stored currency vs the market the session actually received (window.Shopify.country / currency.active), and stored vs visible (line count, variant options, quantity, line price amount and currency indicator, cart badge, total). No currency conversion is ever applied.
 
-Statuses: PASS (everything matched), REGRESSION (a mismatch, with details), UNSUPPORTED (theme not Dawn-family, requested market not served, unreadable prices), BLOCKED (bot challenge, HTTP 429, password-protected store without password), ERROR (timeout or runtime failure after one retry). Only PASS and REGRESSION are billed in hosted mode.
+Statuses: PASS (everything matched), REGRESSION (a mismatch, with details), UNSUPPORTED (theme without an adapter, requested market not served, unreadable prices), BLOCKED (bot challenge, HTTP 429, password-protected store without password), ERROR (timeout or runtime failure after one retry). Only PASS and REGRESSION are billed in hosted mode.
 
 ## Architecture
-- Engine: TypeScript, Playwright-compatible browser API, deterministic assertions (engine/assert.ts), Dawn-family adapter (engine/adapters/dawn.ts), safety layer (owner-authorized hosts only, no checkout/account/payment/admin paths, SSRF checks on DNS and every navigation).
+- Engine: TypeScript, Playwright-compatible browser API, deterministic assertions (engine/assert.ts), explicit theme adapters for Dawn 15/16 and Horizon 4.4 (engine/adapters/themes.ts), surface detection (drawer if the theme has one, else cart page; a closed or stale drawer is never replaced by the cart page), per-store pacing (engine/pacing.ts: 15 s between cart cycles, Retry-After, capped exponential backoff with jitter, one retry in a fresh session), safety layer (owner-authorized hosts only, no checkout/account/payment/admin paths, SSRF checks on DNS and every navigation).
 - Local: Node 22+ with playwright-core and chromium-headless-shell (CLI `marketcart`, GitHub Action).
 - Hosted: Cloudflare Worker API + D1 ledger + a Durable Object that drives Cloudflare Browser Run sessions with platform egress guardrails; concurrency 1; 90 s per-case timeout, one bounded retry.
 - Payment: Payhip license key (EUR 19) verified server-side on every job; atomic credit reservation in D1; refunds revoke the license.
@@ -42,13 +42,14 @@ Optional per case: `"checks": { "badge": true|false, "total": true|false }` (tot
 EUR 19 = 100 completed hosted cases, valid 30 days from activation; a live/candidate pair uses 2 cases; ERROR/BLOCKED/UNSUPPORTED are released. No subscription. Local CLI runs are free.
 
 ## Limits
-- Dawn and Dawn-family themes only (Dawn, Refresh, Sense, Craft, Studio, Taste, Origin, Crave, Ride, Colorblock, Publisher, Spotlight, Trade). Horizon and other themes: UNSUPPORTED.
+- Themes: Dawn-family (Dawn, Refresh, Sense, Craft, Studio, Taste, Origin, Crave, Ride, Colorblock, Publisher, Spotlight, Trade) and Horizon 4.4.0. Other themes (including Horizon-based siblings): UNSUPPORTED.
+- Verification status: Dawn 16.1.1 cart page verified on a live development store; Dawn 15.4.1/16.1.1 drawer and Horizon 4.4.0 drawer/page verified on version-pinned synthetic markup only (live verification pending).
 - Never opens checkout, never submits payment, never logs in, no anti-bot evasion.
 - Shopify rate-limits rapid cart traffic (HTTP 429 observed on a development store after about four cases in under a minute); throttled cases are BLOCKED and not billed.
 - Zero-decimal currencies rely on Shopify's ×100 Ajax amount convention (community-documented); verified only on synthetic data.
 - Benchmark numbers come from a synthetic fixture written by the same author; live behaviour is checked separately on a Founder-owned development store.
 
-## Benchmark (synthetic, bench-20261107T141346Z)
+## Benchmark (synthetic, bench-20261107T161307Z)
 20/20 as expected · 10/10 planted regressions caught · 0 false PASS.
 - C01 (healthy-baseline): expected PASS, actual PASS
 - C02 (healthy-baseline): expected PASS, actual PASS

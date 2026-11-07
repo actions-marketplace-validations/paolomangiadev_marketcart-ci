@@ -111,5 +111,7 @@ export interface CaseResult {
   cost: CostRecord;
   screenshot: string | null;
   casesConsumed: number; // 1 for single, 2 for a pair
+  theme?: { schema: string | null; version: string | null; adapter: string | null; surface: 'drawer' | 'cart-page' | null };
+  pacing?: { waitedMs: number; rateLimited: boolean; retryAfterMs: number | null; attemptStarts: string[] };
   parts?: CaseResult[]; // live + candidate for pairs
 }

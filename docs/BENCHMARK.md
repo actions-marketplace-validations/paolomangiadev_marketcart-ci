@@ -1,6 +1,6 @@
 # Benchmark: 20 synthetic cases (expected vs actual)
 
-Run `bench-20261107T141346Z` · engine `0.1.0+49668598` · **20/20** classified as expected · planted regressions caught **10/10** · false PASS **0**.
+Run `bench-20261107T161307Z` · engine `0.1.0+0a4e5cee` · **20/20** classified as expected · planted regressions caught **10/10** · false PASS **0**.
 
 Method: the 20 cases and their expected statuses were frozen in `evidence/benchmark-manifest.json` before the engine was written. Each case runs against a **synthetic fixture** (a mock store with Dawn-style markup, https://marketcart-fixture.pages.dev) where one scenario plants one known defect. The fixture and the engine have the same author, so this table shows the classes of bugs the engine detects; it does not prove behaviour on any particular live store. Live smoke results on a real Shopify development store are reported separately.
 
@@ -22,7 +22,7 @@ Method: the 20 cases and their expected statuses were frozen in `evidence/benchm
 | C14 | currency-price | Equivalent localized formatting: de-DE '1.234,56 €' equals stored 123456 EUR minor units (dot = grouping, comma = decimal). | PASS | PASS | stored == visible across 1 line(s), market DE/EUR verified in-session |
 | C15 | live-candidate | Healthy live vs unchanged healthy candidate: both pass, observations identical. Consumes 2 cases. | PASS | PASS | live and candidate both pass with identical stored/visible observations |
 | C16 | live-candidate | Healthy live vs broken candidate (stale drawer). Consumes 2 cases. | REGRESSION | REGRESSION | candidate regressed (live PASS) |
-| C17 | inconclusive | Storefront answers 429 with a bot-challenge interstitial; never PASS. | BLOCKED | BLOCKED | storefront blocked automation (HTTP 429, challenge page) |
+| C17 | inconclusive | Storefront answers 429 with a bot-challenge interstitial; never PASS. | BLOCKED | BLOCKED | storefront rate limited (HTTP 429) |
 | C18 | inconclusive | Non-Dawn theme markup: no supported adapter; never PASS. | UNSUPPORTED | UNSUPPORTED | no supported adapter: theme schema "Debut" |
 | C19 | inconclusive | Add-to-cart request hangs; per-case timeout fires (6 s fixture timeout, one bounded retry); never PASS. | ERROR | ERROR | case timeout after 6000 ms |
 | C20 | inconclusive | Requested JP/JPY but the store keeps serving IE/EUR in-session; the market cannot be verified, even though the cart itself is internally consistent; never PASS. | UNSUPPORTED | UNSUPPORTED | requested market JP/JPY not verified in-session (observed IE/EUR) |

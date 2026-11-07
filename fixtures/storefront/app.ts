@@ -6,8 +6,13 @@
 export const SCENARIOS = [
   'healthy', 'healthy-candidate', 'stale-drawer', 'stale-badge', 'stale-qty', 'wrong-variant', 'drop-second', 'qty-clamp',
   'cart-currency-usd', 'visible-wrong-symbol', 'visible-wrong-amount', 'challenge', 'non-dawn', 'hang', 'no-market',
-  'password-gate',
+  'password-gate', 'rate-limit-once', 'rate-limit-always', 'drawer-no-open', 'missing-total',
 ] as const;
+
+import { drawerHtml, headerHtml, productFormHtml, rowsHtml, SKINS, skinClientScript, skinInfo, totalHtml, type Skin } from './skins.ts';
+
+// Rate-limit scenarios: HTTP 429 with Retry-After: 1 on the product page (once per fixture instance, or always).
+let rateLimitOnceServed = false;
 
 // Storefront password gate (Shopify-style: form at /password, digest cookie on success). Test-only constant password.
 export const FIXTURE_STOREFRONT_PASSWORD = 'fixture-pass';
@@ -243,11 +248,13 @@ export async function handle(req: Request, opts: FixtureOptions = {}): Promise<R
       return page('<p class="errors">Wrong password</p>');
     }
   }
-  const m = url.pathname.match(/^\/s\/([a-z-]+)(\/.*)$/);
-  if (!m || !(SCENARIOS as readonly string[]).includes(m[1])) return html('not found', 404);
-  const sc = m[1] as Scenario;
-  const rest = m[2];
-  const root = `/s/${sc}/`;
+  const m = url.pathname.match(/^(?:\/k\/([a-z0-9-]+))?\/s\/([a-z-]+)(\/.*)$/);
+  if (!m || !(SCENARIOS as readonly string[]).includes(m[2])) return html('not found', 404);
+  if (m[1] && !(SKINS as readonly string[]).includes(m[1])) return html('unknown skin', 404);
+  const skin = (m[1] ?? null) as Skin | null;
+  const sc = m[2] as Scenario;
+  const rest = m[3];
+  const root = `${skin ? `/k/${skin}` : ''}/s/${sc}/`;
   if (sc === 'password-gate' && cookies(req).storefront_digest !== DIGEST) return new Response(null, { status: 302, headers: { location: '/password' } });
   // Checkout stub for third-party tools that walk to checkout. No form fields, nothing can be paid. MarketCart never visits it.
   if (req.method === 'GET' && /^\/checkouts\//.test(rest)) {
@@ -273,13 +280,27 @@ export async function handle(req: Request, opts: FixtureOptions = {}): Promise<R
   }
   if (req.method === 'GET' && rest.startsWith('/products/')) {
     if (sc === 'challenge') return html('<!doctype html><title>Just a moment...</title><div id="challenge-running">Verify you are human</div>', 429, { 'retry-after': '60' });
+    if (sc === 'rate-limit-always' || (sc === 'rate-limit-once' && !rateLimitOnceServed)) {
+      rateLimitOnceServed = true;
+      return html('<!doctype html><title>Too many requests</title><p>Rate limited (fixture)</p>', 429, { 'retry-after': '1' });
+    }
     const product = CATALOG.find((p) => p.handle === rest.slice('/products/'.length));
     if (!product) return html('product not found', 404);
     const variantId = Number(url.searchParams.get('variant') ?? product.variants[0].id);
     const cart = cartJson(state, sc, root);
+    if (skin) return html(skinProductPage(skin, sc, root, mkt, product, variantId, cart), 200, { 'set-cookie': mktCookie });
     return html(productPage(sc, root, mkt, product, variantId, cart), 200, { 'set-cookie': mktCookie });
   }
   if (req.method === 'GET' && rest === '/cart.js') return json(cartJson(state, sc, root));
+  if (req.method === 'GET' && rest === '/cart' && skin) {
+    const cart = cartJson(state, sc, root);
+    const m2 = MARKETS[mkt];
+    const money = (c: number) => formatMoney(c, sc === 'visible-wrong-symbol' ? '${{amount}}' : m2.format);
+    const body = skinInfo(skin).family === 'horizon'
+      ? `<h1>Cart</h1><cart-items-component><table class="cart-items__table"><tbody>${rowsHtml(skin, cart, sc, money)}</tbody></table></cart-items-component>${sc === 'missing-total' ? '' : totalHtml(skin, money(cart.total_price), cart.items.length === 0)}`
+      : `<h1>Your cart</h1><cart-items><table class="cart-items"><tbody>${rowsHtml(skin, cart, sc, money)}</tbody></table></cart-items>${sc === 'missing-total' ? '' : totalHtml(skin, money(cart.total_price), cart.items.length === 0)}`;
+    return html(skinShell(skin, sc, root, mkt, 'Cart', body, cart, ''));
+  }
   if (req.method === 'GET' && rest === '/cart') {
     const cart = cartJson(state, sc, root);
     const fmt = MARKETS[mkt].format;
@@ -317,6 +338,31 @@ export async function handle(req: Request, opts: FixtureOptions = {}): Promise<R
     return json({ items: added }, 200, { 'set-cookie': `cart=${b64(JSON.stringify(next))}; ${cookieBase}` });
   }
   return html('not found', 404);
+}
+
+function skinShell(skin: Skin, sc: Scenario, root: string, mkt: string, title: string, body: string, cart: ReturnType<typeof cartJson>, drawer: string): string {
+  const info = skinInfo(skin);
+  const m = MARKETS[mkt];
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(title)}</title><meta name="robots" content="noindex">
+<style>${STYLE} dialog{position:fixed;right:0;top:0;margin:0 0 0 auto;height:100%;width:420px}</style>
+<script>window.Shopify={shop:"fixture.myshopify.example",locale:"en",country:${JSON.stringify(mkt)},currency:{active:${JSON.stringify(m.currency)},rate:"1.0"},theme:{name:${JSON.stringify(info.schema + ' ' + info.version)},schema_name:${JSON.stringify(info.schema)},schema_version:${JSON.stringify(info.version)},role:"main"},routes:{root:${JSON.stringify(root)}}};</script>
+</head><body>
+<div class="fixture-banner">SYNTHETIC FIXTURE — skin <code>${esc(skin)}</code>, scenario <code>${esc(sc)}</code>. Not a real store; nothing is for sale.</div>
+${headerHtml(skin, root, cart.item_count)}
+<main>${body}</main>
+${drawer}
+</body></html>`;
+}
+
+function skinProductPage(skin: Skin, sc: Scenario, root: string, mkt: string, product: Product, variantId: number, cart: ReturnType<typeof cartJson>): string {
+  const m = MARKETS[mkt];
+  const variant = product.variants.find((v) => v.id === variantId) ?? product.variants[0];
+  const money = (c: number) => formatMoney(c, m.format);
+  const empty = cart.items.length === 0;
+  const body = `<h1 class="product__title">${esc(product.title)}</h1><div class="price">${esc(money(variant.prices[m.currency]))}</div>${productFormHtml(skin, root, variant.id)}`;
+  const drawer = drawerHtml(skin, rowsHtml(skin, cart, sc, money), money(cart.total_price), empty);
+  const fmt = sc === 'visible-wrong-symbol' ? '${{amount}}' : m.format;
+  return skinShell(skin, sc, root, mkt, product.title, body + skinClientScript(skin, sc, root, FORMAT_MONEY_CLIENT_JS, fmt, product.variants[0].id), cart, drawer);
 }
 
 export { CURRENCY_FORMAT };

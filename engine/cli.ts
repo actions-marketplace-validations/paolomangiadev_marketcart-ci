@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { startFixture } from '../fixtures/storefront/server.ts';
 import { launchBrowser } from './launch.ts';
 import { runCase, runPair } from './runner.ts';
+import { StorePacer } from './pacing.ts';
 import { findSecrets } from './safety.ts';
 import type { CaseResult, CaseSpec, Market, PairSpec, Status } from './types.ts';
 
@@ -171,10 +172,11 @@ async function check(file: string): Promise<number> {
   const version = engineVersion();
   const browser = await launchBrowser(true);
   const results: CaseResult[] = [];
+  const pacer = new StorePacer(); // same per-store policy as the hosted runner (15 s between cart cycles, 429 backoff)
   try {
     for (const c of cfg.cases) {
       const base: CaseSpec = { id: c.id, adapter: 'dawn', market: c.market, lines: c.lines, authorizedDomains: cfg.authorizedDomains, evidenceClass: 'live-shopify', checks: c.checks };
-      const opts = { engineVersion: version, allowLoopbackFixture: false, screenshotDir: null };
+      const opts = { engineVersion: version, allowLoopbackFixture: false, screenshotDir: null, pacer };
       results.push(c.candidate ? await runPair(browser, { id: c.id, live: { ...base, id: `${c.id}-live` }, candidate: { ...base, id: `${c.id}-candidate`, lines: c.candidate.lines } }, opts) : await runCase(browser, base, opts));
     }
   } finally {
