@@ -109,24 +109,39 @@ async function serverEvent(db: Db, event: string, source = 'server', dedupe?: st
 // stores the storefront password is used once, in memory, to read the real home page.
 async function ownershipVerified(host: string, token: string, password?: string): Promise<{ ok: boolean; why: string }> {
   const ua = { 'user-agent': 'MarketCartCI-verify/0.2 (+https://marketcart-ci.pages.dev)' };
-  let cookie = '';
+  // Shopify keeps the unlocked state in its session cookies and requires the form's authenticity_token (CSRF),
+  // so the gate is passed like a browser would: GET the form, POST with its token and cookies, then GET /.
+  const jar = new Map<string, string>();
+  const eat = (res: Response) => {
+    for (const c of res.headers.getSetCookie()) {
+      const kv = c.split(';')[0];
+      const i = kv.indexOf('=');
+      if (i > 0) jar.set(kv.slice(0, i), kv.slice(i + 1));
+    }
+  };
+  const cookie = () => [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
   let r = await fetch(`https://${host}/`, { redirect: 'manual', headers: ua });
+  eat(r);
   const loc = r.headers.get('location') ?? '';
   if (r.status >= 300 && r.status < 400 && /\/password(\?|$)/.test(loc)) {
     if (!password) return { ok: false, why: 'store is password-protected: include its storefrontPassword' };
-    const body = new URLSearchParams({ form_type: 'storefront_password', utf8: '✓', password });
-    const p = await fetch(`https://${host}/password`, { method: 'POST', redirect: 'manual', headers: { ...ua, 'content-type': 'application/x-www-form-urlencoded' }, body });
-    const set = p.headers.get('set-cookie') ?? '';
-    const m = set.match(/storefront_digest=([^;]+)/);
-    if (!m) return { ok: false, why: 'storefront password rejected' };
-    cookie = `storefront_digest=${m[1]}`;
-    r = await fetch(`https://${host}/`, { redirect: 'manual', headers: { ...ua, cookie } });
+    const g = await fetch(`https://${host}/password`, { redirect: 'manual', headers: { ...ua, cookie: cookie() } });
+    eat(g);
+    const form = await g.text();
+    const token = form.match(/name="authenticity_token"[^>]*value="([^"]+)"/)?.[1] ?? form.match(/value="([^"]+)"[^>]*name="authenticity_token"/)?.[1] ?? '';
+    const body = new URLSearchParams({ form_type: 'storefront_password', utf8: '✓', authenticity_token: token, password });
+    const p = await fetch(`https://${host}/password`, { method: 'POST', redirect: 'manual', headers: { ...ua, 'content-type': 'application/x-www-form-urlencoded', cookie: cookie() }, body });
+    eat(p);
+    if (p.status === 429) return { ok: false, why: 'store rate-limited the password form (HTTP 429); retry later' };
+    r = await fetch(`https://${host}/`, { redirect: 'manual', headers: { ...ua, cookie: cookie() } });
+    if (r.status >= 300 && r.status < 400 && /\/password/.test(r.headers.get('location') ?? '')) return { ok: false, why: 'storefront password rejected' };
   }
   if (r.status !== 200) return { ok: false, why: `home page HTTP ${r.status}` };
   const html = (await r.text()).slice(0, 300_000);
-  const m = html.match(/<meta[^>]+name=["']marketcart-verification["'][^>]+content=["']([a-f0-9]{24})["']/i);
-  if (!m) return { ok: false, why: 'verification meta tag not found on the home page' };
-  return m[1] === token ? { ok: true, why: 'verified' } : { ok: false, why: 'verification token does not match' };
+  // A store may carry several tags (e.g. the free-check tag and a license tag); any exact match proves control.
+  const tags = [...html.matchAll(/<meta[^>]+name=["']marketcart-verification["'][^>]+content=["']([a-f0-9]{24})["']/gi)].map((m) => m[1]);
+  if (tags.length === 0) return { ok: false, why: 'verification meta tag not found on the home page' };
+  return tags.includes(token) ? { ok: true, why: 'verified' } : { ok: false, why: 'verification token does not match' };
 }
 const licenseDomainToken = (pepper: string, licHash: string, host: string) => hmacHex(pepper, `domain:${licHash}:${host}`).then((h) => h.slice(0, 24));
 const freeDomainToken = (pepper: string, host: string) => hmacHex(pepper, `free:${host}`).then((h) => h.slice(0, 24));
@@ -356,6 +371,9 @@ async function route(req: Request, env: Env): Promise<Response> {
   const url = new URL(req.url);
   const db = d1Db(env.DB);
   const p = url.pathname;
+  // Public traffic arrives through the Pages front (marketcart-ci.pages.dev) via a service binding. The account's
+  // *.workers.dev address only keeps the Payhip webhook path alive until the webhook URL is moved; nothing else.
+  if (url.hostname.endsWith('.workers.dev') && !(req.method === 'POST' && p === '/v1/webhooks/payhip')) return json(404, { error: 'not found' });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers });
   if (p === '/v1/health') return json(200, { ok: true, engineVersion: ENGINE_VERSION, runner: 'cloudflare-browser-run', paidConfigured: !!(env.PAYHIP_PRODUCT_SECRET_KEY && env.LICENSE_PEPPER && env.PAYHIP_PRODUCT_LINK), webhookConfigured: !!env.PAYHIP_API_KEY });
   if (p === '/v1/demo' && req.method === 'POST') return demo(env, db);
@@ -402,6 +420,21 @@ async function route(req: Request, env: Env): Promise<Response> {
       openJobs: await db.all(`SELECT COUNT(*) AS n FROM jobs WHERE state = 'reserved'`, []),
       browserRunUsedSecondsToday: await usedBrowserSeconds(env), // Cloudflare's own counter (lags; reconcile)
     });
+  }
+  // Operator revocation test: disables a TEST license at Payhip (v2 license/disable). Refuses any non-test key.
+  if (p === '/v1/admin/license-disable' && req.method === 'POST') {
+    if (!env.ADMIN_TOKEN || bearer(req) !== env.ADMIN_TOKEN) return json(401, { error: 'admin only' });
+    const cfg = serviceConfig(env, db);
+    const b = await readJson<{ license_key?: string }>(req, 2_000);
+    const lk = String(b.license_key ?? '').trim().toUpperCase();
+    if (!cfg.testLicenseHashes?.has(licenseHash(cfg.pepper, lk))) return json(403, { error: 'only TEST licenses can be disabled here' });
+    const r = await fetch('https://payhip.com/api/v2/license/disable', { method: 'PUT', headers: { 'product-secret-key': env.PAYHIP_PRODUCT_SECRET_KEY!, 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body: new URLSearchParams({ license_key: lk }) });
+    const text = await r.text();
+    let enabled: unknown = null;
+    try {
+      enabled = (JSON.parse(text) as { data?: { enabled?: boolean } }).data?.enabled ?? null;
+    } catch {}
+    return json(r.ok ? 200 : 502, { payhipStatus: r.status, enabled });
   }
   // Operator smoke on the Founder-authorized dev store(s): same engine, same production runner, no credits involved.
   if (p === '/v1/admin/smoke' && req.method === 'POST') {

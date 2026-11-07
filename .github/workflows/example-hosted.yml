@@ -1,0 +1,29 @@
+# Example: hosted MarketCart CI checks of a password-protected Shopify development store (Dawn).
+# Secrets: MARKETCART_LICENSE (Payhip license key), MARKETCART_STOREFRONT_PASSWORD, MARKETCART_STORE (store host).
+name: example-hosted
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  hosted:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write cases.json (store host from a secret)
+        env:
+          STORE: ${{ secrets.MARKETCART_STORE }}
+        run: |
+          mkdir -p marketcart
+          printf '%s' '{"authorizedDomains":["'"$STORE"'"],"cases":[{"id":"tee-s","market":{"country":"US","currency":"USD"},"lines":[{"url":"https://'"$STORE"'/products/smoke-tee?variant=50986339303682","variantId":50986339303682,"quantity":1}]},{"id":"tee-m-x2","market":{"country":"US","currency":"USD"},"lines":[{"url":"https://'"$STORE"'/products/smoke-tee?variant=50986339336450","variantId":50986339336450,"quantity":2}]}]}' > marketcart/cases.json
+      - name: MarketCart CI (hosted)
+        id: mc
+        uses: paolomangiadev/marketcart-ci@v0
+        with:
+          mode: remote
+          cases: marketcart/cases.json
+          license: ${{ secrets.MARKETCART_LICENSE }}
+          storefront-password: ${{ secrets.MARKETCART_STOREFRONT_PASSWORD }}
+          source: example-workflow
+      - name: Exit code
+        if: always()
+        run: echo "MarketCart exit code ${{ steps.mc.outputs.exit-code }} (0 PASS, 1 REGRESSION, 2 inconclusive, 3 license/API)"
