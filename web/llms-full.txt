@@ -1,0 +1,89 @@
+# MarketCart CI — full reference
+
+Canonical: https://marketcart-ci.pages.dev/ · Repository: https://github.com/paolomangiadev/marketcart-ci · Purchase: https://payhip.com/b/er1iY · Updated 2026-11-07.
+
+## What it does
+MarketCart CI checks that a Shopify cart shows what Shopify stored. For each case it opens the product page in an isolated real-browser session, adds the requested variant and quantity with the theme's own add-to-cart form, reads the stored cart from Shopify's Ajax API (/cart.js) independently of the page, then reads the visible cart (drawer, or the cart page when the theme has no drawer). It compares requested vs stored (variant, quantity, unexpected lines), stored currency vs the market the session actually received (window.Shopify.country / currency.active), and stored vs visible (line count, variant options, quantity, line price amount and currency indicator, cart badge, total). No currency conversion is ever applied.
+
+Statuses: PASS (everything matched), REGRESSION (a mismatch, with details), UNSUPPORTED (theme not Dawn-family, requested market not served, unreadable prices), BLOCKED (bot challenge, HTTP 429, password-protected store without password), ERROR (timeout or runtime failure after one retry). Only PASS and REGRESSION are billed in hosted mode.
+
+## Architecture
+- Engine: TypeScript, Playwright-compatible browser API, deterministic assertions (engine/assert.ts), Dawn-family adapter (engine/adapters/dawn.ts), safety layer (owner-authorized hosts only, no checkout/account/payment/admin paths, SSRF checks on DNS and every navigation).
+- Local: Node 22+ with playwright-core and chromium-headless-shell (CLI `marketcart`, GitHub Action).
+- Hosted: Cloudflare Worker API + D1 ledger + a Durable Object that drives Cloudflare Browser Run sessions with platform egress guardrails; concurrency 1; 90 s per-case timeout, one bounded retry.
+- Payment: Payhip license key (EUR 19) verified server-side on every job; atomic credit reservation in D1; refunds revoke the license.
+
+## Input (cases.json)
+```json
+{
+  "authorizedDomains": ["your-store.myshopify.com"],
+  "cases": [
+    { "id": "tee-s", "market": { "country": "US", "currency": "USD" },
+      "lines": [{ "url": "https://your-store.myshopify.com/products/tee?variant=123", "variantId": 123, "quantity": 1 }] },
+    { "id": "release-pair", "market": { "country": "US", "currency": "USD" },
+      "lines": [{ "url": "https://your-store.myshopify.com/products/tee?variant=123", "variantId": 123, "quantity": 1 }],
+      "candidate": { "lines": [{ "url": "https://your-store.myshopify.com/products/tee?variant=123&preview_theme_id=987", "variantId": 123, "quantity": 1 }] } }
+  ]
+}
+```
+Optional per case: `"checks": { "badge": true|false, "total": true|false }` (total true = required; absent or unreadable total is then UNSUPPORTED, never PASS).
+
+## Output (per case)
+`{ caseId, kind: "single"|"pair", status, reason, checks: [{ name, ok, detail }], market: { verified, observedCountry, observedCurrency }, stored: { currency, itemCount, totalMinor, lines[] }, visible: { surface, lines[], badgeCount, totalText }, durationMs, attempts, casesConsumed }`. Exit codes: 0 all PASS, 1 any REGRESSION, 2 any inconclusive, 3 license/auth error.
+
+## Usage
+- Demo, no key: `node integrations/cli/marketcart.ts demo`
+- Local check of your own store: `node engine/cli.ts check cases.json`
+- Hosted: `MARKETCART_LICENSE=... node integrations/cli/marketcart.ts remote cases.json` (prove store control first: GET /v1/domain-token?host=... with the license in the Authorization header, paste the meta tag into theme.liquid <head>).
+- GitHub Action: `uses: paolomangiadev/marketcart-ci@v0` with `mode: remote`, `cases: cases.json`, `license: ${{ secrets.MARKETCART_LICENSE }}`.
+- Free hosted check: one completed case per verified store (POST /v1/free-check), while the global daily free budget lasts.
+
+## Pricing
+EUR 19 = 100 completed hosted cases, valid 30 days from activation; a live/candidate pair uses 2 cases; ERROR/BLOCKED/UNSUPPORTED are released. No subscription. Local CLI runs are free.
+
+## Limits
+- Dawn and Dawn-family themes only (Dawn, Refresh, Sense, Craft, Studio, Taste, Origin, Crave, Ride, Colorblock, Publisher, Spotlight, Trade). Horizon and other themes: UNSUPPORTED.
+- Never opens checkout, never submits payment, never logs in, no anti-bot evasion.
+- Shopify rate-limits rapid cart traffic (HTTP 429 observed on a development store after about four cases in under a minute); throttled cases are BLOCKED and not billed.
+- Zero-decimal currencies rely on Shopify's ×100 Ajax amount convention (community-documented); verified only on synthetic data.
+- Benchmark numbers come from a synthetic fixture written by the same author; live behaviour is checked separately on a Founder-owned development store.
+
+## Benchmark (synthetic, bench-20261107T141346Z)
+20/20 as expected · 10/10 planted regressions caught · 0 false PASS.
+- C01 (healthy-baseline): expected PASS, actual PASS
+- C02 (healthy-baseline): expected PASS, actual PASS
+- C03 (healthy-baseline): expected PASS, actual PASS
+- C04 (healthy-baseline): expected PASS, actual PASS
+- C05 (stale-visible-state): expected REGRESSION, actual REGRESSION
+- C06 (stale-visible-state): expected REGRESSION, actual REGRESSION
+- C07 (stale-visible-state): expected REGRESSION, actual REGRESSION
+- C08 (item-quantity-drift): expected REGRESSION, actual REGRESSION
+- C09 (item-quantity-drift): expected REGRESSION, actual REGRESSION
+- C10 (item-quantity-drift): expected REGRESSION, actual REGRESSION
+- C11 (currency-price): expected REGRESSION, actual REGRESSION
+- C12 (currency-price): expected REGRESSION, actual REGRESSION
+- C13 (currency-price): expected REGRESSION, actual REGRESSION
+- C14 (currency-price): expected PASS, actual PASS
+- C15 (live-candidate): expected PASS, actual PASS
+- C16 (live-candidate): expected REGRESSION, actual REGRESSION
+- C17 (inconclusive): expected BLOCKED, actual BLOCKED
+- C18 (inconclusive): expected UNSUPPORTED, actual UNSUPPORTED
+- C19 (inconclusive): expected ERROR, actual ERROR
+- C20 (inconclusive): expected UNSUPPORTED, actual UNSUPPORTED
+
+## Competitors (scoped)
+- MarketCart CI (this project): Real browser; theme add-to-cart; /cart.js read independently of the DOM; drawer/cart page, badge, total, in-session market currency. On our fixture: C05 stale drawer: REGRESSION · C08 wrong variant: REGRESSION (20/20 synthetic cases as expected). Price: EUR 19 / 100 completed hosted cases (30 days); CLI free locally. Evidence: EXECUTED (synthetic fixture + Founder-owned live Dawn dev store). Source: https://github.com/paolomangiadev/marketcart-ci
+- E-Com Checkout Auditor (Apify Actor): Browser journey product → cart → checkout page, pass/fail per phase. On our fixture: C05 stale drawer: returned success (run nv2AeksMAjnh2ksTq) · C08 wrong variant: returned success (run bJKqMgPGZy7PxTBJq). Our parity contract expects REGRESSION for both. n = 2 synthetic cases. Price: USD 0.05 per result (Apify Store, 2026-11-06). Evidence: EXECUTED n=2 on our synthetic fixture. Source: https://apify.com/solutionssmart/e-com-checkout-auditor
+- Shopify Variant Cartability Checker (Apify Actor): Ajax cart API transaction path (/products/x.js, /cart/add.js); never reads the rendered drawer by design. On our fixture: Inconclusive: our path-prefixed fixture is incompatible with root-relative tools (runs bs9d3gdsxiMNjjmig, fv8KT7HOpo32sX8cB). Price: USD 0.005 per result (2026-11-06). Evidence: EXECUTED, inconclusive (fixture limitation). Source: https://apify.com/silver-rook-labs/shopify-variant-cartability-checker
+- PromiseCheck: Cart Monitoring (Shopify app): Add to Cart, options and cart quantities on desktop/mobile; draft-theme vs saved live scan; hourly checks; screenshots, alerts. On our fixture: Not tested (differently scoped Shopify Admin app; price anchor only). Price: USD 79.99 / month, 14-day trial (listing read 2026-11-07). Evidence: DOCUMENTED, UNTESTED. Source: https://apps.shopify.com/promisecheck
+- StoreCheck Markets (Shopify app): Live cart checks per market: availability, currency, totals, quantities, discounts. On our fixture: Not tested. Price: Free manual / USD 9.99 per month automated (listing read 2026-11-06). Evidence: DOCUMENTED, UNTESTED. Source: https://apps.shopify.com/storecheck-markets
+
+## FAQ
+### Why does the Dawn cart drawer show an empty or stale cart while /cart.js already has the item?
+Dawn's product form posts to /cart/add.js and asks Shopify to return the re-rendered cart drawer and cart icon sections in the same response; the drawer then swaps in that HTML. If a customization, an app script or a missing section breaks that swap, Shopify has stored the item (it is in /cart.js) but the shopper still sees the old drawer and badge. MarketCart CI reads /cart.js independently of the page and compares it with what the drawer shows; any difference is a REGRESSION with the exact mismatch.
+
+### How do I catch a Shopify Markets currency mismatch in the cart?
+Check three things in the same browser session: the market Shopify actually served (window.Shopify.country and window.Shopify.currency.active), the stored cart currency in /cart.js, and the currency shown next to every visible price and the total. They must agree, with no conversion applied. MarketCart CI does exactly that; if the session never gets the requested market, the result is UNSUPPORTED rather than a PASS you cannot trust.
+
+### How can I run cart regression tests in CI before publishing a Shopify theme?
+Run the open-source MarketCart CI CLI or GitHub Action on every theme change. Describe cases as JSON (product URL, variant, quantity, market), optionally as a pair: the published theme versus an unpublished theme preview. The job exits 0 on PASS, 1 on REGRESSION and 2 when a case is inconclusive, so a failing cart blocks the deploy. Local runs are free; hosted runs use prepaid case credits.

@@ -1,0 +1,8 @@
+node_modules/
+evidence/runs/
+marketcart-results.json
+.env
+.env.*
+.wrangler/
+service/wrangler.jsonc
+service/node_modules/

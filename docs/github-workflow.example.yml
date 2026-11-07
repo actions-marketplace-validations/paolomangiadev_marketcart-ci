@@ -1,0 +1,26 @@
+# Example workflow (copy to .github/workflows/marketcart.yml in YOUR theme repository).
+name: cart-parity
+on:
+  pull_request:          # never pull_request_target: fork PRs must not receive secrets
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: paolomangiadev/marketcart-ci@v0
+        with:
+          mode: demo
+  store:
+    # hosted checks only for branches of this repository (secrets are unavailable to forks anyway)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: paolomangiadev/marketcart-ci@v0
+        with:
+          mode: remote
+          cases: marketcart/cases.json
+          license: ${{ secrets.MARKETCART_LICENSE }}
+          storefront-password: ${{ secrets.MARKETCART_STOREFRONT_PASSWORD }}   # only for password-protected stores

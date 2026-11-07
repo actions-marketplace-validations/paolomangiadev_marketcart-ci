@@ -1,0 +1,13 @@
+# Competitor matrix (scoped, dated)
+
+Read 2026-11-07. "EXECUTED" means we ran the product on the same synthetic inputs; "DOCUMENTED" means only the vendor listing was read. Two executed synthetic cases do not support a broad superiority claim.
+
+| Product | What it checks | Result on our fixture | Price | Evidence |
+|---|---|---|---|---|
+| MarketCart CI (this project) | Real browser; theme add-to-cart; /cart.js read independently of the DOM; drawer/cart page, badge, total, in-session market currency | C05 stale drawer: REGRESSION · C08 wrong variant: REGRESSION (20/20 synthetic cases as expected) | EUR 19 / 100 completed hosted cases (30 days); CLI free locally | EXECUTED (synthetic fixture + Founder-owned live Dawn dev store) ([source](https://github.com/paolomangiadev/marketcart-ci)) |
+| E-Com Checkout Auditor (Apify Actor) | Browser journey product → cart → checkout page, pass/fail per phase | C05 stale drawer: returned success (run nv2AeksMAjnh2ksTq) · C08 wrong variant: returned success (run bJKqMgPGZy7PxTBJq). Our parity contract expects REGRESSION for both. n = 2 synthetic cases | USD 0.05 per result (Apify Store, 2026-11-06) | EXECUTED n=2 on our synthetic fixture ([source](https://apify.com/solutionssmart/e-com-checkout-auditor)) |
+| Shopify Variant Cartability Checker (Apify Actor) | Ajax cart API transaction path (/products/x.js, /cart/add.js); never reads the rendered drawer by design | Inconclusive: our path-prefixed fixture is incompatible with root-relative tools (runs bs9d3gdsxiMNjjmig, fv8KT7HOpo32sX8cB) | USD 0.005 per result (2026-11-06) | EXECUTED, inconclusive (fixture limitation) ([source](https://apify.com/silver-rook-labs/shopify-variant-cartability-checker)) |
+| PromiseCheck: Cart Monitoring (Shopify app) | Add to Cart, options and cart quantities on desktop/mobile; draft-theme vs saved live scan; hourly checks; screenshots, alerts | Not tested (differently scoped Shopify Admin app; price anchor only) | USD 79.99 / month, 14-day trial (listing read 2026-11-07) | DOCUMENTED, UNTESTED ([source](https://apps.shopify.com/promisecheck)) |
+| StoreCheck Markets (Shopify app) | Live cart checks per market: availability, currency, totals, quantities, discounts | Not tested | Free manual / USD 9.99 per month automated (listing read 2026-11-06) | DOCUMENTED, UNTESTED ([source](https://apps.shopify.com/storecheck-markets)) |
+
+E-Com Checkout Auditor raw outputs (sanitized): both runs returned a `success` journey for our fixture URLs; on C05 the drawer stayed empty while /cart.js held the item, on C08 the stored variant differed from the requested one. PromiseCheck is a differently scoped Shopify Admin app (monitoring, screenshots, alerts) listed as a price anchor; it was not tested.

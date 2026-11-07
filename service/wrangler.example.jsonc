@@ -1,0 +1,15 @@
+{
+  // Copy to wrangler.jsonc, create a D1 database (wrangler d1 create marketcart) and fill in its id.
+  // Secrets (wrangler secret put): PAYHIP_PRODUCT_SECRET_KEY, PAYHIP_API_KEY, LICENSE_PEPPER, ADMIN_TOKEN, OPERATOR_STORES.
+  "name": "marketcart-ci",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "browser": { "binding": "BROWSER" },
+  "durable_objects": { "bindings": [{ "name": "RUNNER", "class_name": "BrowserRunner" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["BrowserRunner"] }],
+  "d1_databases": [{ "binding": "DB", "database_name": "marketcart", "database_id": "<your-d1-id>", "migrations_dir": "migrations" }],
+  "assets": { "directory": "../web", "not_found_handling": "404-page" },
+  "triggers": { "crons": ["*/15 * * * *"] },
+  "vars": { "PAYHIP_PRODUCT_LINK": "<payhip product key>", "FIXTURE_HOST": "<your fixture host>", "FREE_DAILY_BROWSER_SECONDS": "240", "FREE_DAILY_DEMOS": "60", "FREE_DAILY_CHECKS": "10", "TEST_LICENSE_HASHES": "" }
+}

@@ -1,0 +1,182 @@
+{
+  "summary": {
+    "runId": "bench-20261107T141346Z",
+    "engineVersion": "0.1.0+49668598",
+    "evidenceClass": "synthetic-fixture",
+    "node": "v25.2.1",
+    "platform": "win32-x64",
+    "startedAt": "2026-11-07T14:13:46.836Z",
+    "wallMs": 28826,
+    "total": 20,
+    "correct": 20,
+    "falsePass": 0,
+    "plantedRegressions": 10,
+    "regressionsDetected": 10,
+    "secretsFound": [],
+    "casesConsumed": 22,
+    "attempts": 23,
+    "accepted": true
+  },
+  "results": [
+    {
+      "caseId": "C01",
+      "group": "healthy-baseline",
+      "planted": "Single default variant, qty 1, EUR market verified; stored == visible drawer/badge/total.",
+      "expected": "PASS",
+      "actual": "PASS",
+      "reason": "stored == visible across 1 line(s), market IE/EUR verified in-session"
+    },
+    {
+      "caseId": "C02",
+      "group": "healthy-baseline",
+      "planted": "Non-default variant selected via ?variant; stored and visible both Blue / M.",
+      "expected": "PASS",
+      "actual": "PASS",
+      "reason": "stored == visible across 1 line(s), market IE/EUR verified in-session"
+    },
+    {
+      "caseId": "C03",
+      "group": "healthy-baseline",
+      "planted": "Quantity 3; stored qty, visible qty, badge 3 and line total agree.",
+      "expected": "PASS",
+      "actual": "PASS",
+      "reason": "stored == visible across 1 line(s), market IE/EUR verified in-session"
+    },
+    {
+      "caseId": "C04",
+      "group": "healthy-baseline",
+      "planted": "Zero-decimal currency: JPY minor units are whole yen; ¥7,800 must equal stored 7800 without a /100 conversion.",
+      "expected": "PASS",
+      "actual": "PASS",
+      "reason": "stored == visible across 1 line(s), market JP/JPY verified in-session"
+    },
+    {
+      "caseId": "C05",
+      "group": "stale-visible-state",
+      "planted": "Item stored in cart but the drawer keeps its stale empty render.",
+      "expected": "REGRESSION",
+      "actual": "REGRESSION",
+      "reason": "stored 1 line(s), visible 0 line(s) in drawer; stored line Linen Shirt (Red / M, variant 4101) not visible"
+    },
+    {
+      "caseId": "C06",
+      "group": "stale-visible-state",
+      "planted": "Drawer correct, header cart badge not updated (adapter declares badge; fixture expects it).",
+      "expected": "REGRESSION",
+      "actual": "REGRESSION",
+      "reason": "stored item_count 1, badge absent"
+    },
+    {
+      "caseId": "C07",
+      "group": "stale-visible-state",
+      "planted": "Stored qty 2, drawer shows stale qty 1.",
+      "expected": "REGRESSION",
+      "actual": "REGRESSION",
+      "reason": "variant 4101: stored qty 2, visible qty 1"
+    },
+    {
+      "caseId": "C08",
+      "group": "item-quantity-drift",
+      "planted": "Shopper selected Blue / M (4102); theme JS posts the default variant 4101.",
+      "expected": "REGRESSION",
+      "actual": "REGRESSION",
+      "reason": "requested variant 4102 not in stored cart (stored: 4101); unexpected stored variant 4101"
+    },
+    {
+      "caseId": "C09",
+      "group": "item-quantity-drift",
+      "planted": "Two items stored; drawer re-render drops the second line.",
+      "expected": "REGRESSION",
+      "actual": "REGRESSION",
+      "reason": "stored 2 line(s), visible 1 line(s) in drawer; stored line Merino Socks (Default Title, variant 6301) not visible"
+    },
+    {
+      "caseId": "C10",
+      "group": "item-quantity-drift",
+      "planted": "Server persists qty 2 (clamp) while the optimistic UI shows the requested 3.",
+      "expected": "REGRESSION",
+      "actual": "REGRESSION",
+      "reason": "variant 4101: requested qty 3, stored qty 2; variant 4101: stored qty 2, visible qty 3; variant 4101: stored line 4800 EUR minor, visible 7200"
+    },
+    {
+      "caseId": "C11",
+      "group": "currency-price",
+      "planted": "Market IE/EUR verified in-session, but the stored cart currency is USD (wrong currency).",
+      "expected": "REGRESSION",
+      "actual": "REGRESSION",
+      "reason": "stored cart currency USD, verified market currency EUR; variant 4101: visible \"$26.00\" indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market EUR; visible total \"$26.00\" indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market EUR"
+    },
+    {
+      "caseId": "C12",
+      "group": "currency-price",
+      "planted": "Stored EUR 24.00; drawer shows the same number with the wrong currency ($24.00).",
+      "expected": "REGRESSION",
+      "actual": "REGRESSION",
+      "reason": "variant 4101: visible \"$24.00\" indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market EUR; visible total \"$24.00\" indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market EUR"
+    },
+    {
+      "caseId": "C13",
+      "group": "currency-price",
+      "planted": "Stored EUR 24.00; drawer shows a wrong amount (€20.00).",
+      "expected": "REGRESSION",
+      "actual": "REGRESSION",
+      "reason": "variant 4101: stored line 2400 EUR minor, visible 2000"
+    },
+    {
+      "caseId": "C14",
+      "group": "currency-price",
+      "planted": "Equivalent localized formatting: de-DE '1.234,56 €' equals stored 123456 EUR minor units (dot = grouping, comma = decimal).",
+      "expected": "PASS",
+      "actual": "PASS",
+      "reason": "stored == visible across 1 line(s), market DE/EUR verified in-session"
+    },
+    {
+      "caseId": "C15",
+      "group": "live-candidate",
+      "planted": "Healthy live vs unchanged healthy candidate: both pass, observations identical. Consumes 2 cases.",
+      "expected": "PASS",
+      "actual": "PASS",
+      "reason": "live and candidate both pass with identical stored/visible observations"
+    },
+    {
+      "caseId": "C16",
+      "group": "live-candidate",
+      "planted": "Healthy live vs broken candidate (stale drawer). Consumes 2 cases.",
+      "expected": "REGRESSION",
+      "actual": "REGRESSION",
+      "reason": "candidate regressed (live PASS)"
+    },
+    {
+      "caseId": "C17",
+      "group": "inconclusive",
+      "planted": "Storefront answers 429 with a bot-challenge interstitial; never PASS.",
+      "expected": "BLOCKED",
+      "actual": "BLOCKED",
+      "reason": "storefront blocked automation (HTTP 429, challenge page)"
+    },
+    {
+      "caseId": "C18",
+      "group": "inconclusive",
+      "planted": "Non-Dawn theme markup: no supported adapter; never PASS.",
+      "expected": "UNSUPPORTED",
+      "actual": "UNSUPPORTED",
+      "reason": "no supported adapter: theme schema \"Debut\""
+    },
+    {
+      "caseId": "C19",
+      "group": "inconclusive",
+      "planted": "Add-to-cart request hangs; per-case timeout fires (6 s fixture timeout, one bounded retry); never PASS.",
+      "expected": "ERROR",
+      "actual": "ERROR",
+      "reason": "case timeout after 6000 ms"
+    },
+    {
+      "caseId": "C20",
+      "group": "inconclusive",
+      "planted": "Requested JP/JPY but the store keeps serving IE/EUR in-session; the market cannot be verified, even though the cart itself is internally consistent; never PASS.",
+      "expected": "UNSUPPORTED",
+      "actual": "UNSUPPORTED",
+      "reason": "requested market JP/JPY not verified in-session (observed IE/EUR)"
+    }
+  ]
+}

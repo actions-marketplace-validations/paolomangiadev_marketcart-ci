@@ -1,0 +1,36 @@
+{
+  "runId": "hosted-smoke-nopw-20261107T113150Z",
+  "httpStatus": 200,
+  "clientWallMs": 1394,
+  "leaked": false,
+  "response": {
+    "runId": "smoke-hosted-smoke-nopw-20261107T113150Z",
+    "engineVersion": "0.1.0+49668598",
+    "runner": "cloudflare-browser-run",
+    "usage": {
+      "wallMs": 1082,
+      "sessionMs": 608,
+      "launchRetries": 0
+    },
+    "results": [
+      {
+        "caseId": "H06-no-password",
+        "kind": "single",
+        "status": "BLOCKED",
+        "reason": "storefront is password-protected; supply its storefront password (never in URLs)",
+        "checks": [],
+        "market": null,
+        "stored": null,
+        "visible": null,
+        "durationMs": 571,
+        "attempts": 1,
+        "casesConsumed": 1,
+        "engineVersion": "0.1.0+49668598",
+        "evidenceClass": "live-shopify",
+        "urls": [
+          "https://devstore-7c8d9245.myshopify.com/products/smoke-tee?variant=50986339303682"
+        ]
+      }
+    ]
+  }
+}

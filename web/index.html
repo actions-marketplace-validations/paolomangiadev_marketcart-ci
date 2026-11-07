@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MarketCart CI — Shopify cart parity checks for CI</title>
+<meta name="description" content="Check that a Shopify Dawn cart shows what Shopify stored: /cart.js vs the visible drawer, variant, quantity, prices and market currency. Open-source CLI and GitHub Action; hosted runs EUR 19 per 100 cases.">
+<link rel="canonical" href="https://marketcart-ci.pages.dev/">
+<link rel="alternate" type="text/plain" href="https://marketcart-ci.pages.dev/llms.txt" title="llms.txt">
+<meta name="robots" content="index,follow">
+<script type="application/ld+json">[{"@context":"https://schema.org","@type":"SoftwareApplication","name":"MarketCart CI","applicationCategory":"DeveloperApplication","operatingSystem":"Any (Node.js 22+ for the CLI; hosted API over HTTPS)","url":"https://marketcart-ci.pages.dev/","description":"Cart parity checks for Shopify stores on Dawn-family themes: compares the stored cart (/cart.js) with the visible cart drawer or cart page, including variant, quantity, prices and in-session market currency. JSON result and exit code for CI.","softwareVersion":"0.1.0+49668598","offers":{"@type":"Offer","price":"19.00","priceCurrency":"EUR","url":"https://payhip.com/b/er1iY","description":"100 completed hosted cases, valid 30 days from activation","availability":"https://schema.org/InStock"},"sameAs":["https://github.com/paolomangiadev/marketcart-ci"]},{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Why does the Dawn cart drawer show an empty or stale cart while /cart.js already has the item?","acceptedAnswer":{"@type":"Answer","text":"Dawn's product form posts to /cart/add.js and asks Shopify to return the re-rendered cart drawer and cart icon sections in the same response; the drawer then swaps in that HTML. If a customization, an app script or a missing section breaks that swap, Shopify has stored the item (it is in /cart.js) but the shopper still sees the old drawer and badge. MarketCart CI reads /cart.js independently of the page and compares it with what the drawer shows; any difference is a REGRESSION with the exact mismatch."}},{"@type":"Question","name":"How do I catch a Shopify Markets currency mismatch in the cart?","acceptedAnswer":{"@type":"Answer","text":"Check three things in the same browser session: the market Shopify actually served (window.Shopify.country and window.Shopify.currency.active), the stored cart currency in /cart.js, and the currency shown next to every visible price and the total. They must agree, with no conversion applied. MarketCart CI does exactly that; if the session never gets the requested market, the result is UNSUPPORTED rather than a PASS you cannot trust."}},{"@type":"Question","name":"How can I run cart regression tests in CI before publishing a Shopify theme?","acceptedAnswer":{"@type":"Answer","text":"Run the open-source MarketCart CI CLI or GitHub Action on every theme change. Describe cases as JSON (product URL, variant, quantity, market), optionally as a pair: the published theme versus an unpublished theme preview. The job exits 0 on PASS, 1 on REGRESSION and 2 when a case is inconclusive, so a failing cart blocks the deploy. Local runs are free; hosted runs use prepaid case credits."}}]}]</script>
+<style>
+:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#5c5c57;--line:#e3e2dc;--card:#fff;--pass:#1f7a3f;--fail:#b3261e;--warn:#8a5a00;--accent:#1f5fbf;--code:#f1f0ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--pass:#5cc67e;--fail:#ff8a80;--warn:#e0b050;--accent:#7fb0ff;--code:#24241f}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--pass:#5cc67e;--fail:#ff8a80;--warn:#e0b050;--accent:#7fb0ff;--code:#24241f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:32px 16px 64px}h1{font-size:30px;margin:0 0 8px}h2{font-size:21px;margin:40px 0 10px}h3{font-size:17px;margin:18px 0 6px}
+p{margin:8px 0}.muted{color:var(--muted)}a{color:var(--accent)}code,pre{background:var(--code);border-radius:6px;font:13px/1.5 ui-monospace,Consolas,monospace}
+code{padding:1px 5px}pre{padding:12px;overflow-x:auto}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tw{overflow-x:auto}.PASS{color:var(--pass);font-weight:600}.REGRESSION{color:var(--fail);font-weight:600}.BLOCKED,.UNSUPPORTED,.ERROR{color:var(--warn);font-weight:600}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:13px;margin:2px 4px 2px 0}
+button,.btn{display:inline-block;border:0;border-radius:8px;padding:10px 16px;background:var(--accent);color:#fff;font-weight:600;text-decoration:none;cursor:pointer;font-size:15px}
+button[disabled]{opacity:.5;cursor:not-allowed}ul{padding-left:20px}label{display:block;margin:8px 0 2px;font-weight:600;font-size:14px}
+input,select{width:100%;max-width:520px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+.row{display:flex;gap:12px;flex-wrap:wrap}.row>div{flex:1 1 160px}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>MarketCart CI</h1>
+  <p>A release check for Shopify stores on Dawn-family themes. It adds an item in a real browser, then compares the cart Shopify <em>stored</em> (<code>/cart.js</code>) with what the shopper <em>sees</em>: line items, variant, quantity, line price, market currency, badge and total. The result is JSON plus an exit code, so a theme deploy fails before shoppers find the bug.</p>
+  <p><span class="pill">Open source CLI + GitHub Action</span><span class="pill">Hosted: EUR 19 / 100 cases</span><span class="pill">Dawn family only</span> <a href="https://github.com/paolomangiadev/marketcart-ci" id="repo-link">Repository</a> · <a href="/llms.txt">llms.txt</a></p>
+</header>
+
+<section id="demo" aria-labelledby="demo-h">
+  <h2 id="demo-h">Run the seeded demo now</h2>
+  <p>Three cases against our <strong>synthetic fixture</strong> (a mock store with Dawn-style markup and planted defects), executed live by the hosted engine: a healthy cart, a stale drawer, and a live-vs-candidate pair where the candidate regressed. Results are cached for 10 minutes.</p>
+  <div class="card"><button id="run-demo" type="button">Run demo</button> <span id="demo-status" class="muted"></span>
+  <div class="tw"><table id="demo-table" hidden><thead><tr><th>Case</th><th>Expected</th><th>Result</th><th>Why</th></tr></thead><tbody></tbody></table></div></div>
+</section>
+
+<section id="free-check" aria-labelledby="free-h">
+  <h2 id="free-h">Check your own store (one free case)</h2>
+  <div class="card">
+    <p>1. Get your verification tag and paste it into <em>Online Store › Themes › Edit code › layout/theme.liquid</em>, inside <code>&lt;head&gt;</code>. This proves you control the store; we only test stores that carry it.</p>
+    <div class="row"><div><label for="fc-host">Store host</label><input id="fc-host" placeholder="your-store.myshopify.com" autocomplete="off"></div></div>
+    <p><button id="fc-token" type="button">Get my tag</button></p><pre id="fc-meta" hidden></pre>
+    <p>2. Pick one product variant to test.</p>
+    <div class="row">
+      <div><label for="fc-url">Product URL</label><input id="fc-url" placeholder="https://your-store.myshopify.com/products/tee?variant=123"></div>
+      <div><label for="fc-variant">Variant ID</label><input id="fc-variant" inputmode="numeric" placeholder="123"></div>
+      <div><label for="fc-qty">Quantity</label><input id="fc-qty" inputmode="numeric" value="1"></div>
+    </div>
+    <div class="row">
+      <div><label for="fc-country">Market country</label><input id="fc-country" value="US" maxlength="2"></div>
+      <div><label for="fc-currency">Market currency</label><input id="fc-currency" value="USD" maxlength="3"></div>
+      <div><label for="fc-pw">Storefront password (only if the store is password-protected)</label><input id="fc-pw" type="password" autocomplete="off"></div>
+    </div>
+    <p><button id="fc-run" type="button">Run free check</button> <span id="fc-status" class="muted"></span></p>
+    <pre id="fc-out" hidden></pre>
+    <p class="muted">The password is sent over HTTPS for this one run, used in memory and never stored or logged. Inconclusive results (BLOCKED, UNSUPPORTED, ERROR) do not use up your free case. Free checks stop for the day when the shared free budget is used.</p>
+  </div>
+</section>
+
+<section id="pricing" aria-labelledby="price-h">
+  <h2 id="price-h">Pricing</h2>
+  <div class="card">
+    <p><strong>EUR 19 = 100 completed hosted cases</strong>, valid 30 days from activation. A live-vs-candidate pair uses 2 cases. Only PASS or REGRESSION results use credits; BLOCKED, UNSUPPORTED and ERROR are released. No subscription. The CLI and Action run locally for free.</p>
+    <p id="buy"><a class="btn" href="https://payhip.com/b/er1iY" rel="noopener" id="buy-link">Buy 100 cases — EUR 19</a></p>
+    <p class="muted">Sold through Payhip (seller: NorthGrid Digital). Your license key arrives automatically after payment and is checked on every job; refunds disable it.</p>
+  </div>
+</section>
+
+<section id="benchmark" aria-labelledby="bench-h">
+  <h2 id="bench-h">Benchmark: 20 cases, expected vs actual</h2>
+  <p>Run <code>bench-20261107T141346Z</code>, engine <code>0.1.0+49668598</code>: <strong>20/20</strong> classified as expected, planted regressions caught <strong>10/10</strong>, false PASS <strong>0</strong>. The expected statuses were frozen before the engine was written. These are <strong>synthetic</strong> cases (one planted defect per scenario) by the same author as the engine: they show which bug classes are detected, not how a particular live store behaves. <a href="https://github.com/paolomangiadev/marketcart-ci/blob/main/docs/BENCHMARK.md">Methodology</a> · <a href="/benchmark.json">raw JSON</a></p>
+  <div class="tw"><table><caption class="muted">Synthetic fixture: https://marketcart-fixture.pages.dev</caption><thead><tr><th scope="col">Case</th><th scope="col">Group</th><th scope="col">Planted</th><th scope="col">Expected</th><th scope="col">Actual</th><th scope="col">Engine reason</th></tr></thead><tbody>
+<tr><td>C01</td><td>healthy-baseline</td><td>Single default variant, qty 1, EUR market verified; stored == visible drawer/badge/total.</td><td>PASS</td><td class="PASS">PASS</td><td>stored == visible across 1 line(s), market IE/EUR verified in-session</td></tr>
+<tr><td>C02</td><td>healthy-baseline</td><td>Non-default variant selected via ?variant; stored and visible both Blue / M.</td><td>PASS</td><td class="PASS">PASS</td><td>stored == visible across 1 line(s), market IE/EUR verified in-session</td></tr>
+<tr><td>C03</td><td>healthy-baseline</td><td>Quantity 3; stored qty, visible qty, badge 3 and line total agree.</td><td>PASS</td><td class="PASS">PASS</td><td>stored == visible across 1 line(s), market IE/EUR verified in-session</td></tr>
+<tr><td>C04</td><td>healthy-baseline</td><td>Zero-decimal currency: JPY minor units are whole yen; ¥7,800 must equal stored 7800 without a /100 conversion.</td><td>PASS</td><td class="PASS">PASS</td><td>stored == visible across 1 line(s), market JP/JPY verified in-session</td></tr>
+<tr><td>C05</td><td>stale-visible-state</td><td>Item stored in cart but the drawer keeps its stale empty render.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>stored 1 line(s), visible 0 line(s) in drawer; stored line Linen Shirt (Red / M, variant 4101) not visible</td></tr>
+<tr><td>C06</td><td>stale-visible-state</td><td>Drawer correct, header cart badge not updated (adapter declares badge; fixture expects it).</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>stored item_count 1, badge absent</td></tr>
+<tr><td>C07</td><td>stale-visible-state</td><td>Stored qty 2, drawer shows stale qty 1.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>variant 4101: stored qty 2, visible qty 1</td></tr>
+<tr><td>C08</td><td>item-quantity-drift</td><td>Shopper selected Blue / M (4102); theme JS posts the default variant 4101.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>requested variant 4102 not in stored cart (stored: 4101); unexpected stored variant 4101</td></tr>
+<tr><td>C09</td><td>item-quantity-drift</td><td>Two items stored; drawer re-render drops the second line.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>stored 2 line(s), visible 1 line(s) in drawer; stored line Merino Socks (Default Title, variant 6301) not visible</td></tr>
+<tr><td>C10</td><td>item-quantity-drift</td><td>Server persists qty 2 (clamp) while the optimistic UI shows the requested 3.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>variant 4101: requested qty 3, stored qty 2; variant 4101: stored qty 2, visible qty 3; variant 4101: stored line 4800 EUR minor, visible 7200</td></tr>
+<tr><td>C11</td><td>currency-price</td><td>Market IE/EUR verified in-session, but the stored cart currency is USD (wrong currency).</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>stored cart currency USD, verified market currency EUR; variant 4101: visible &quot;$26.00&quot; indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market EUR; visible total &quot;$26.00&quot; indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|A</td></tr>
+<tr><td>C12</td><td>currency-price</td><td>Stored EUR 24.00; drawer shows the same number with the wrong currency ($24.00).</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>variant 4101: visible &quot;$24.00&quot; indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market EUR; visible total &quot;$24.00&quot; indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market EUR</td></tr>
+<tr><td>C13</td><td>currency-price</td><td>Stored EUR 24.00; drawer shows a wrong amount (€20.00).</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>variant 4101: stored line 2400 EUR minor, visible 2000</td></tr>
+<tr><td>C14</td><td>currency-price</td><td>Equivalent localized formatting: de-DE '1.234,56 €' equals stored 123456 EUR minor units (dot = grouping, comma = decimal).</td><td>PASS</td><td class="PASS">PASS</td><td>stored == visible across 1 line(s), market DE/EUR verified in-session</td></tr>
+<tr><td>C15</td><td>live-candidate</td><td>Healthy live vs unchanged healthy candidate: both pass, observations identical. Consumes 2 cases.</td><td>PASS</td><td class="PASS">PASS</td><td>live and candidate both pass with identical stored/visible observations</td></tr>
+<tr><td>C16</td><td>live-candidate</td><td>Healthy live vs broken candidate (stale drawer). Consumes 2 cases.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>candidate regressed (live PASS)</td></tr>
+<tr><td>C17</td><td>inconclusive</td><td>Storefront answers 429 with a bot-challenge interstitial; never PASS.</td><td>BLOCKED</td><td class="BLOCKED">BLOCKED</td><td>storefront blocked automation (HTTP 429, challenge page)</td></tr>
+<tr><td>C18</td><td>inconclusive</td><td>Non-Dawn theme markup: no supported adapter; never PASS.</td><td>UNSUPPORTED</td><td class="UNSUPPORTED">UNSUPPORTED</td><td>no supported adapter: theme schema &quot;Debut&quot;</td></tr>
+<tr><td>C19</td><td>inconclusive</td><td>Add-to-cart request hangs; per-case timeout fires (6 s fixture timeout, one bounded retry); never PASS.</td><td>ERROR</td><td class="ERROR">ERROR</td><td>case timeout after 6000 ms</td></tr>
+<tr><td>C20</td><td>inconclusive</td><td>Requested JP/JPY but the store keeps serving IE/EUR in-session; the market cannot be verified, even though the cart itself is internally consistent; never PASS.</td><td>UNSUPPORTED</td><td class="UNSUPPORTED">UNSUPPORTED</td><td>requested market JP/JPY not verified in-session (observed IE/EUR)</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="competitors" aria-labelledby="comp-h">
+  <h2 id="comp-h">How it compares (scoped)</h2>
+  <p>On the C05 stale-drawer and C08 wrong-variant synthetic fixtures, E-Com Checkout Auditor returned success where our parity contract expects REGRESSION. That is two synthetic cases, not a general superiority claim. PromiseCheck is a differently scoped Shopify Admin app, listed as a price anchor and not tested.</p>
+  <div class="tw"><table><thead><tr><th scope="col">Product</th><th scope="col">What it checks</th><th scope="col">Result on our fixture</th><th scope="col">Price</th><th scope="col">Evidence</th></tr></thead><tbody>
+<tr><th scope="row">MarketCart CI (this project)</th><td>Real browser; theme add-to-cart; /cart.js read independently of the DOM; drawer/cart page, badge, total, in-session market currency</td><td>C05 stale drawer: REGRESSION · C08 wrong variant: REGRESSION (20/20 synthetic cases as expected)</td><td>EUR 19 / 100 completed hosted cases (30 days); CLI free locally</td><td>EXECUTED (synthetic fixture + Founder-owned live Dawn dev store) · <a href="https://github.com/paolomangiadev/marketcart-ci" rel="nofollow noopener">source</a></td></tr>
+<tr><th scope="row">E-Com Checkout Auditor (Apify Actor)</th><td>Browser journey product → cart → checkout page, pass/fail per phase</td><td>C05 stale drawer: returned success (run nv2AeksMAjnh2ksTq) · C08 wrong variant: returned success (run bJKqMgPGZy7PxTBJq). Our parity contract expects REGRESSION for both. n = 2 synthetic cases</td><td>USD 0.05 per result (Apify Store, 2026-11-06)</td><td>EXECUTED n=2 on our synthetic fixture · <a href="https://apify.com/solutionssmart/e-com-checkout-auditor" rel="nofollow noopener">source</a></td></tr>
+<tr><th scope="row">Shopify Variant Cartability Checker (Apify Actor)</th><td>Ajax cart API transaction path (/products/x.js, /cart/add.js); never reads the rendered drawer by design</td><td>Inconclusive: our path-prefixed fixture is incompatible with root-relative tools (runs bs9d3gdsxiMNjjmig, fv8KT7HOpo32sX8cB)</td><td>USD 0.005 per result (2026-11-06)</td><td>EXECUTED, inconclusive (fixture limitation) · <a href="https://apify.com/silver-rook-labs/shopify-variant-cartability-checker" rel="nofollow noopener">source</a></td></tr>
+<tr><th scope="row">PromiseCheck: Cart Monitoring (Shopify app)</th><td>Add to Cart, options and cart quantities on desktop/mobile; draft-theme vs saved live scan; hourly checks; screenshots, alerts</td><td>Not tested (differently scoped Shopify Admin app; price anchor only)</td><td>USD 79.99 / month, 14-day trial (listing read 2026-11-07)</td><td>DOCUMENTED, UNTESTED · <a href="https://apps.shopify.com/promisecheck" rel="nofollow noopener">source</a></td></tr>
+<tr><th scope="row">StoreCheck Markets (Shopify app)</th><td>Live cart checks per market: availability, currency, totals, quantities, discounts</td><td>Not tested</td><td>Free manual / USD 9.99 per month automated (listing read 2026-11-06)</td><td>DOCUMENTED, UNTESTED · <a href="https://apps.shopify.com/storecheck-markets" rel="nofollow noopener">source</a></td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="faq" aria-labelledby="faq-h">
+  <h2 id="faq-h">FAQ</h2>
+  <h3>Why does the Dawn cart drawer show an empty or stale cart while /cart.js already has the item?</h3>
+  <p>Dawn's product form posts to /cart/add.js and asks Shopify to return the re-rendered cart drawer and cart icon sections in the same response; the drawer then swaps in that HTML. If a customization, an app script or a missing section breaks that swap, Shopify has stored the item (it is in /cart.js) but the shopper still sees the old drawer and badge. MarketCart CI reads /cart.js independently of the page and compares it with what the drawer shows; any difference is a REGRESSION with the exact mismatch.</p>
+  <h3>How do I catch a Shopify Markets currency mismatch in the cart?</h3>
+  <p>Check three things in the same browser session: the market Shopify actually served (window.Shopify.country and window.Shopify.currency.active), the stored cart currency in /cart.js, and the currency shown next to every visible price and the total. They must agree, with no conversion applied. MarketCart CI does exactly that; if the session never gets the requested market, the result is UNSUPPORTED rather than a PASS you cannot trust.</p>
+  <h3>How can I run cart regression tests in CI before publishing a Shopify theme?</h3>
+  <p>Run the open-source MarketCart CI CLI or GitHub Action on every theme change. Describe cases as JSON (product URL, variant, quantity, market), optionally as a pair: the published theme versus an unpublished theme preview. The job exits 0 on PASS, 1 on REGRESSION and 2 when a case is inconclusive, so a failing cart blocks the deploy. Local runs are free; hosted runs use prepaid case credits.</p>
+</section>
+
+<section id="limits" aria-labelledby="lim-h">
+  <h2 id="lim-h">Limits, stated plainly</h2>
+  <ul>
+    <li>Dawn and Dawn-family themes only. Horizon (Shopify's newer default) and other themes return UNSUPPORTED, never PASS.</li>
+    <li>Never opens checkout, never submits payment, never logs in, no anti-bot evasion. Bot challenges and HTTP 429 return BLOCKED.</li>
+    <li>The market is verified inside the session; no currency conversion is ever applied. Zero-decimal currencies rely on Shopify's ×100 Ajax convention, verified on synthetic data only.</li>
+    <li>Shopify rate-limits rapid cart traffic; large suites should be spaced out. Concurrency 1 in hosted mode.</li>
+  </ul>
+</section>
+<footer class="muted"><p>Updated 2026-11-07. <a href="/llms-full.txt">llms-full.txt</a> · <a href="https://github.com/paolomangiadev/marketcart-ci">Source</a></p></footer>
+</main>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

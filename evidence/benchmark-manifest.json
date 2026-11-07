@@ -1,0 +1,518 @@
+{
+  "manifestVersion": "1.0.0",
+  "frozenAt": "2026-11-06T18:52:00+01:00",
+  "evidenceClass": "SYNTHETIC — owned deterministic mock storefront (fixtures/storefront), Dawn-family markup. Not a real Shopify observation.",
+  "statuses": [
+    "PASS",
+    "REGRESSION",
+    "BLOCKED",
+    "UNSUPPORTED",
+    "ERROR"
+  ],
+  "acceptance": {
+    "minCorrect": 19,
+    "total": 20,
+    "allPlantedRegressionsDetected": true,
+    "maxFalsePass": 0,
+    "secretsInOutput": 0,
+    "note": "A navigation success or HTTP 200 is never sufficient for PASS. False PASS = actual PASS where expected is not PASS."
+  },
+  "resultSchema": {
+    "caseId": "string",
+    "engineVersion": "semver+sha256(engine sources)[0:8]",
+    "source": {
+      "urls": "sanitized URLs (query reduced to variant/country/preview_theme_id)",
+      "evidenceClass": "synthetic-fixture | live-shopify"
+    },
+    "requested": {
+      "market": {
+        "country": "ISO 3166-1 alpha-2",
+        "currency": "ISO 4217"
+      },
+      "lines": [
+        {
+          "variantId": "number",
+          "quantity": "number"
+        }
+      ]
+    },
+    "market": {
+      "verified": "boolean",
+      "observedCountry": "string|null",
+      "observedCurrency": "string|null",
+      "evidence": "in-session window.Shopify values, never the URL"
+    },
+    "stored": {
+      "currency": "string",
+      "itemCount": "number",
+      "totalMinor": "integer minor units of stored currency",
+      "lines": [
+        {
+          "variantId": "number",
+          "productTitle": "string",
+          "variantTitle": "string",
+          "quantity": "number",
+          "finalLinePriceMinor": "integer"
+        }
+      ]
+    },
+    "visible": {
+      "surface": "drawer | cart-page",
+      "badgeCount": "number|null",
+      "totalText": "string|null",
+      "lines": [
+        {
+          "variantId": "number|null",
+          "title": "string",
+          "options": [
+            "string"
+          ],
+          "quantity": "number|null",
+          "priceText": "string|null",
+          "parsed": {
+            "amountMinor": "integer|null",
+            "currencyCandidates": [
+              "string"
+            ]
+          }
+        }
+      ]
+    },
+    "status": "PASS | REGRESSION | BLOCKED | UNSUPPORTED | ERROR",
+    "reason": "string (first failing check, or summary)",
+    "checks": [
+      {
+        "name": "string",
+        "ok": "boolean",
+        "detail": "string"
+      }
+    ],
+    "durationMs": "number (all attempts)",
+    "attempts": "1..2 (at most one bounded retry, ERROR only)",
+    "cost": {
+      "measured": "boolean",
+      "usd": "number | 'UNKNOWN'",
+      "basis": "string"
+    },
+    "screenshot": "redacted PNG path for non-PASS cases, or null"
+  },
+  "fixtureCatalog": {
+    "linen-shirt": {
+      "4101": "Red / M",
+      "4102": "Blue / M"
+    },
+    "socks": {
+      "6301": "Default Title"
+    },
+    "wool-coat": {
+      "5201": "Default Title"
+    },
+    "markets": {
+      "IE": "EUR en-IE",
+      "DE": "EUR de-DE",
+      "JP": "JPY ja-JP (zero-decimal)",
+      "US": "USD en-US"
+    }
+  },
+  "cases": [
+    {
+      "id": "C01",
+      "group": "healthy-baseline",
+      "expected": "PASS",
+      "reason": "Single default variant, qty 1, EUR market verified; stored == visible drawer/badge/total.",
+      "kind": "single",
+      "scenario": "healthy",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "group": "healthy-baseline",
+      "expected": "PASS",
+      "reason": "Non-default variant selected via ?variant; stored and visible both Blue / M.",
+      "kind": "single",
+      "scenario": "healthy",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4102,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C03",
+      "group": "healthy-baseline",
+      "expected": "PASS",
+      "reason": "Quantity 3; stored qty, visible qty, badge 3 and line total agree.",
+      "kind": "single",
+      "scenario": "healthy",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 3
+        }
+      ]
+    },
+    {
+      "id": "C04",
+      "group": "healthy-baseline",
+      "expected": "PASS",
+      "reason": "Zero-decimal currency: JPY minor units are whole yen; ¥7,800 must equal stored 7800 without a /100 conversion.",
+      "kind": "single",
+      "scenario": "healthy",
+      "market": {
+        "country": "JP",
+        "currency": "JPY"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 2
+        }
+      ]
+    },
+    {
+      "id": "C05",
+      "group": "stale-visible-state",
+      "expected": "REGRESSION",
+      "reason": "Item stored in cart but the drawer keeps its stale empty render.",
+      "kind": "single",
+      "scenario": "stale-drawer",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C06",
+      "group": "stale-visible-state",
+      "expected": "REGRESSION",
+      "reason": "Drawer correct, header cart badge not updated (adapter declares badge; fixture expects it).",
+      "kind": "single",
+      "scenario": "stale-badge",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        }
+      ],
+      "checks": {
+        "badge": true
+      }
+    },
+    {
+      "id": "C07",
+      "group": "stale-visible-state",
+      "expected": "REGRESSION",
+      "reason": "Stored qty 2, drawer shows stale qty 1.",
+      "kind": "single",
+      "scenario": "stale-qty",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 2
+        }
+      ]
+    },
+    {
+      "id": "C08",
+      "group": "item-quantity-drift",
+      "expected": "REGRESSION",
+      "reason": "Shopper selected Blue / M (4102); theme JS posts the default variant 4101.",
+      "kind": "single",
+      "scenario": "wrong-variant",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4102,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C09",
+      "group": "item-quantity-drift",
+      "expected": "REGRESSION",
+      "reason": "Two items stored; drawer re-render drops the second line.",
+      "kind": "single",
+      "scenario": "drop-second",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        },
+        {
+          "product": "socks",
+          "variantId": 6301,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C10",
+      "group": "item-quantity-drift",
+      "expected": "REGRESSION",
+      "reason": "Server persists qty 2 (clamp) while the optimistic UI shows the requested 3.",
+      "kind": "single",
+      "scenario": "qty-clamp",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 3
+        }
+      ]
+    },
+    {
+      "id": "C11",
+      "group": "currency-price",
+      "expected": "REGRESSION",
+      "reason": "Market IE/EUR verified in-session, but the stored cart currency is USD (wrong currency).",
+      "kind": "single",
+      "scenario": "cart-currency-usd",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C12",
+      "group": "currency-price",
+      "expected": "REGRESSION",
+      "reason": "Stored EUR 24.00; drawer shows the same number with the wrong currency ($24.00).",
+      "kind": "single",
+      "scenario": "visible-wrong-symbol",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C13",
+      "group": "currency-price",
+      "expected": "REGRESSION",
+      "reason": "Stored EUR 24.00; drawer shows a wrong amount (€20.00).",
+      "kind": "single",
+      "scenario": "visible-wrong-amount",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C14",
+      "group": "currency-price",
+      "expected": "PASS",
+      "reason": "Equivalent localized formatting: de-DE '1.234,56 €' equals stored 123456 EUR minor units (dot = grouping, comma = decimal).",
+      "kind": "single",
+      "scenario": "healthy",
+      "market": {
+        "country": "DE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "wool-coat",
+          "variantId": 5201,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C15",
+      "group": "live-candidate",
+      "expected": "PASS",
+      "reason": "Healthy live vs unchanged healthy candidate: both pass, observations identical. Consumes 2 cases.",
+      "kind": "pair",
+      "live": {
+        "scenario": "healthy"
+      },
+      "candidate": {
+        "scenario": "healthy-candidate"
+      },
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 2
+        }
+      ]
+    },
+    {
+      "id": "C16",
+      "group": "live-candidate",
+      "expected": "REGRESSION",
+      "reason": "Healthy live vs broken candidate (stale drawer). Consumes 2 cases.",
+      "kind": "pair",
+      "live": {
+        "scenario": "healthy"
+      },
+      "candidate": {
+        "scenario": "stale-drawer"
+      },
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C17",
+      "group": "inconclusive",
+      "expected": "BLOCKED",
+      "reason": "Storefront answers 429 with a bot-challenge interstitial; never PASS.",
+      "kind": "single",
+      "scenario": "challenge",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C18",
+      "group": "inconclusive",
+      "expected": "UNSUPPORTED",
+      "reason": "Non-Dawn theme markup: no supported adapter; never PASS.",
+      "kind": "single",
+      "scenario": "non-dawn",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "C19",
+      "group": "inconclusive",
+      "expected": "ERROR",
+      "reason": "Add-to-cart request hangs; per-case timeout fires (6 s fixture timeout, one bounded retry); never PASS.",
+      "kind": "single",
+      "scenario": "hang",
+      "market": {
+        "country": "IE",
+        "currency": "EUR"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        }
+      ],
+      "timeoutMs": 6000
+    },
+    {
+      "id": "C20",
+      "group": "inconclusive",
+      "expected": "UNSUPPORTED",
+      "reason": "Requested JP/JPY but the store keeps serving IE/EUR in-session; the market cannot be verified, even though the cart itself is internally consistent; never PASS.",
+      "kind": "single",
+      "scenario": "no-market",
+      "market": {
+        "country": "JP",
+        "currency": "JPY"
+      },
+      "lines": [
+        {
+          "product": "linen-shirt",
+          "variantId": 4101,
+          "quantity": 1
+        }
+      ]
+    }
+  ]
+}

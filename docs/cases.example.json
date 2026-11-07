@@ -1,0 +1,16 @@
+{
+  "authorizedDomains": ["your-store.example.com"],
+  "cases": [
+    {
+      "id": "home-ie-eur",
+      "market": { "country": "IE", "currency": "EUR" },
+      "lines": [{ "url": "https://your-store.example.com/en-ie/products/linen-shirt?variant=123456789", "variantId": 123456789, "quantity": 2 }]
+    },
+    {
+      "id": "release-candidate",
+      "market": { "country": "IE", "currency": "EUR" },
+      "lines": [{ "url": "https://your-store.example.com/en-ie/products/linen-shirt?variant=123456789", "variantId": 123456789, "quantity": 1 }],
+      "candidate": { "lines": [{ "url": "https://your-store.example.com/en-ie/products/linen-shirt?variant=123456789&preview_theme_id=987654321", "variantId": 123456789, "quantity": 1 }] }
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+name: 'MarketCart CI Shopify cart parity'
+description: 'Fails a Shopify theme release when the Dawn-family cart shows something other than what it stored.'
+author: 'MarketCart CI'
+branding:
+  icon: 'shopping-cart'
+  color: 'green'
+inputs:
+  mode:
+    description: '"demo" runs the seeded synthetic-fixture demo locally (no key). "remote" runs hosted checks of YOUR authorized store.'
+    required: false
+    default: 'demo'
+  cases:
+    description: 'Path (relative to the workspace) of the cases JSON for remote mode.'
+    required: false
+    default: ''
+  api-url:
+    description: 'Hosted API base URL (remote mode).'
+    required: false
+    default: 'https://marketcart-ci.pages.dev'
+  storefront-password:
+    description: 'Storefront password, only for password-protected (development) stores. Pass it from a secret.'
+    required: false
+    default: ''
+  license:
+    description: 'Payhip license key for hosted checks. Pass it from a repository secret; it is never needed for the demo.'
+    required: false
+    default: ''
+  source:
+    description: 'Attribution tag sent with hosted jobs.'
+    required: false
+    default: 'github-action'
+outputs:
+  exit-code:
+    description: '0 all PASS, 1 REGRESSION found, 2 inconclusive only, 3 API/license error'
+    value: ${{ steps.run.outputs.exit-code }}
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+    - name: Install
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci --omit=dev --no-audit --no-fund
+    - name: Install headless browser (demo only)
+      if: ${{ inputs.mode == 'demo' }}
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npx --no-install playwright-core install --with-deps chromium-headless-shell
+    - name: Run
+      id: run
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        MARKETCART_API_URL: ${{ inputs.api-url }}
+        MARKETCART_LICENSE: ${{ inputs.license }}
+        MARKETCART_STOREFRONT_PASSWORD: ${{ inputs.storefront-password }}
+        MARKETCART_SOURCE: ${{ inputs.source }}
+        MARKETCART_MODE: ${{ inputs.mode }}
+        MARKETCART_CASES: ${{ inputs.cases }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set +e
+        if [ "$MARKETCART_MODE" = "remote" ]; then
+          if [ -z "$MARKETCART_LICENSE" ]; then
+            echo "::notice::No license available (fork PRs never receive secrets). Skipping hosted checks."
+            echo "exit-code=0" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          node "$ACTION_PATH/integrations/cli/marketcart.ts" remote "$GITHUB_WORKSPACE/$MARKETCART_CASES"
+        else
+          node "$ACTION_PATH/integrations/cli/marketcart.ts" demo
+        fi
+        code=$?
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        exit $code
