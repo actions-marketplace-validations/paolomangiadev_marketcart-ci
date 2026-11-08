@@ -18,6 +18,7 @@
 
 import { limits } from '@cloudflare/playwright';
 import { d1Db, type D1Like } from '../../api/d1.ts';
+import { ownershipVerified } from '../../api/ownership.ts';
 import { getGrant, getJob, releaseStale, type Db } from '../../api/ledger.ts';
 import { licenseHash, payhipVerifier, type PayhipWebhook } from '../../api/payhip.ts';
 import { activate, handleWebhook, runPaidJob, type ServiceConfig } from '../../api/service.ts';
@@ -104,45 +105,6 @@ async function serverEvent(db: Db, event: string, source = 'server', dedupe?: st
   await db.batch([{ sql: `INSERT INTO events (day, event, source, origin, n) VALUES (?, ?, ?, 'server', 1) ON CONFLICT(day, event, source, origin) DO UPDATE SET n = n + 1`, params: [day, event, source] }]);
 }
 
-// ---------- ownership proof ----------
-// The store's home page must carry <meta name="marketcart-verification" content="TOKEN">. For password-protected
-// stores the storefront password is used once, in memory, to read the real home page.
-async function ownershipVerified(host: string, token: string, password?: string): Promise<{ ok: boolean; why: string }> {
-  const ua = { 'user-agent': 'MarketCartCI-verify/0.2 (+https://marketcart-ci.pages.dev)' };
-  // Shopify keeps the unlocked state in its session cookies and requires the form's authenticity_token (CSRF),
-  // so the gate is passed like a browser would: GET the form, POST with its token and cookies, then GET /.
-  const jar = new Map<string, string>();
-  const eat = (res: Response) => {
-    for (const c of res.headers.getSetCookie()) {
-      const kv = c.split(';')[0];
-      const i = kv.indexOf('=');
-      if (i > 0) jar.set(kv.slice(0, i), kv.slice(i + 1));
-    }
-  };
-  const cookie = () => [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
-  let r = await fetch(`https://${host}/`, { redirect: 'manual', headers: ua });
-  eat(r);
-  const loc = r.headers.get('location') ?? '';
-  if (r.status >= 300 && r.status < 400 && /\/password(\?|$)/.test(loc)) {
-    if (!password) return { ok: false, why: 'store is password-protected: include its storefrontPassword' };
-    const g = await fetch(`https://${host}/password`, { redirect: 'manual', headers: { ...ua, cookie: cookie() } });
-    eat(g);
-    const form = await g.text();
-    const token = form.match(/name="authenticity_token"[^>]*value="([^"]+)"/)?.[1] ?? form.match(/value="([^"]+)"[^>]*name="authenticity_token"/)?.[1] ?? '';
-    const body = new URLSearchParams({ form_type: 'storefront_password', utf8: '✓', authenticity_token: token, password });
-    const p = await fetch(`https://${host}/password`, { method: 'POST', redirect: 'manual', headers: { ...ua, 'content-type': 'application/x-www-form-urlencoded', cookie: cookie() }, body });
-    eat(p);
-    if (p.status === 429) return { ok: false, why: 'store rate-limited the password form (HTTP 429); retry later' };
-    r = await fetch(`https://${host}/`, { redirect: 'manual', headers: { ...ua, cookie: cookie() } });
-    if (r.status >= 300 && r.status < 400 && /\/password/.test(r.headers.get('location') ?? '')) return { ok: false, why: 'storefront password rejected' };
-  }
-  if (r.status !== 200) return { ok: false, why: `home page HTTP ${r.status}` };
-  const html = (await r.text()).slice(0, 300_000);
-  // A store may carry several tags (e.g. the free-check tag and a license tag); any exact match proves control.
-  const tags = [...html.matchAll(/<meta[^>]+name=["']marketcart-verification["'][^>]+content=["']([a-f0-9]{24})["']/gi)].map((m) => m[1]);
-  if (tags.length === 0) return { ok: false, why: 'verification meta tag not found on the home page' };
-  return tags.includes(token) ? { ok: true, why: 'verified' } : { ok: false, why: 'verification token does not match' };
-}
 const licenseDomainToken = (pepper: string, licHash: string, host: string) => hmacHex(pepper, `domain:${licHash}:${host}`).then((h) => h.slice(0, 24));
 const freeDomainToken = (pepper: string, host: string) => hmacHex(pepper, `free:${host}`).then((h) => h.slice(0, 24));
 
@@ -207,7 +169,7 @@ function validateCases(cases: unknown): JobCase[] {
 }
 // Public result shape: no storefront passwords (never inside results), no screenshots, nothing about other licenses.
 function publicResult(r: CaseResult) {
-  return { caseId: r.caseId, kind: r.kind, status: r.status, reason: r.reason, checks: r.checks, market: r.market, stored: r.stored, visible: r.visible, durationMs: r.durationMs, attempts: r.attempts, casesConsumed: r.casesConsumed, engineVersion: r.engineVersion, evidenceClass: r.source.evidenceClass, urls: r.source.urls, parts: r.parts?.map((p) => ({ caseId: p.caseId, status: p.status, reason: p.reason })) };
+  return { caseId: r.caseId, kind: r.kind, status: r.status, reason: r.reason, checks: r.checks, market: r.market, stored: r.stored, visible: r.visible, durationMs: r.durationMs, attempts: r.attempts, theme: r.theme ?? null, pacing: r.pacing ?? null, casesConsumed: r.casesConsumed, engineVersion: r.engineVersion, evidenceClass: r.source.evidenceClass, urls: r.source.urls, parts: r.parts?.map((p) => ({ caseId: p.caseId, status: p.status, reason: p.reason })) };
 }
 
 // ---------- free budget ----------

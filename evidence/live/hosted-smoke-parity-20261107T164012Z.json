@@ -1,0 +1,284 @@
+{
+  "runId": "hosted-smoke-parity-20261107T164012Z",
+  "httpStatus": 200,
+  "clientWallMs": 39031,
+  "leaked": false,
+  "response": {
+    "runId": "smoke-hosted-smoke-parity-20261107T164012Z",
+    "engineVersion": "0.1.0+cb231be7",
+    "runner": "cloudflare-browser-run",
+    "usage": {
+      "wallMs": 38653,
+      "sessionMs": 22116,
+      "launchRetries": 0
+    },
+    "results": [
+      {
+        "caseId": "H01-S-x1",
+        "kind": "single",
+        "status": "PASS",
+        "reason": "stored == visible across 1 line(s), market US/USD verified in-session",
+        "checks": [
+          {
+            "name": "market.verified",
+            "ok": true,
+            "detail": "requested US/USD; in-session window.Shopify.country=US, window.Shopify.currency.active=USD"
+          },
+          {
+            "name": "theme.variantSelection",
+            "ok": true,
+            "detail": "requested variant 50986339303682, product form selected 50986339303682"
+          },
+          {
+            "name": "stored.variant",
+            "ok": true,
+            "detail": "variant 50986339303682 stored"
+          },
+          {
+            "name": "stored.quantity",
+            "ok": true,
+            "detail": "variant 50986339303682 qty 1"
+          },
+          {
+            "name": "stored.currency",
+            "ok": true,
+            "detail": "stored cart currency USD, verified market currency USD"
+          },
+          {
+            "name": "visible.lineCount",
+            "ok": true,
+            "detail": "stored 1 line(s), visible 1 line(s) in cart-page"
+          },
+          {
+            "name": "visible.variant",
+            "ok": true,
+            "detail": "variant 50986339303682: stored \"S\", visible \"S\""
+          },
+          {
+            "name": "visible.quantity",
+            "ok": true,
+            "detail": "variant 50986339303682: stored qty 1, visible qty 1"
+          },
+          {
+            "name": "visible.currency",
+            "ok": true,
+            "detail": "variant 50986339303682: visible \"$19.00\" indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market USD"
+          },
+          {
+            "name": "visible.amount",
+            "ok": true,
+            "detail": "variant 50986339303682: stored line 1900 USD minor, visible 1900"
+          },
+          {
+            "name": "visible.badge",
+            "ok": true,
+            "detail": "stored item_count 1, badge 1"
+          },
+          {
+            "name": "visible.total.currency",
+            "ok": true,
+            "detail": "visible total \"$19.00 USD\" indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market USD"
+          },
+          {
+            "name": "visible.total",
+            "ok": true,
+            "detail": "stored total 1900, visible \"$19.00 USD\" -> 1900"
+          }
+        ],
+        "market": {
+          "verified": true,
+          "observedCountry": "US",
+          "observedCurrency": "USD",
+          "evidence": "in-session window.Shopify.country=US, window.Shopify.currency.active=USD"
+        },
+        "stored": {
+          "currency": "USD",
+          "itemCount": 1,
+          "totalMinor": 1900,
+          "lines": [
+            {
+              "variantId": 50986339303682,
+              "productTitle": "Smoke Tee",
+              "variantTitle": "S",
+              "quantity": 1,
+              "finalLinePriceMinor": 1900
+            }
+          ]
+        },
+        "visible": {
+          "surface": "cart-page",
+          "badgeDeclared": true,
+          "badgeCount": 1,
+          "totalText": "$19.00 USD",
+          "lines": [
+            {
+              "variantId": 50986339303682,
+              "title": "Smoke Tee",
+              "options": [
+                "S"
+              ],
+              "quantity": 1,
+              "priceText": "$19.00",
+              "parsed": {
+                "amountMinor": 1900,
+                "currencyCandidates": [
+                  "USD",
+                  "CAD",
+                  "AUD",
+                  "NZD",
+                  "MXN",
+                  "SGD",
+                  "HKD",
+                  "CLP",
+                  "COP",
+                  "ARS"
+                ]
+              }
+            }
+          ]
+        },
+        "durationMs": 12015,
+        "attempts": 1,
+        "casesConsumed": 1,
+        "engineVersion": "0.1.0+cb231be7",
+        "evidenceClass": "live-shopify",
+        "urls": [
+          "https://devstore-7c8d9245.myshopify.com/products/smoke-tee?variant=50986339303682"
+        ]
+      },
+      {
+        "caseId": "H02-M-x2",
+        "kind": "single",
+        "status": "PASS",
+        "reason": "stored == visible across 1 line(s), market US/USD verified in-session",
+        "checks": [
+          {
+            "name": "market.verified",
+            "ok": true,
+            "detail": "requested US/USD; in-session window.Shopify.country=US, window.Shopify.currency.active=USD"
+          },
+          {
+            "name": "theme.variantSelection",
+            "ok": true,
+            "detail": "requested variant 50986339336450, product form selected 50986339336450"
+          },
+          {
+            "name": "stored.variant",
+            "ok": true,
+            "detail": "variant 50986339336450 stored"
+          },
+          {
+            "name": "stored.quantity",
+            "ok": true,
+            "detail": "variant 50986339336450 qty 2"
+          },
+          {
+            "name": "stored.currency",
+            "ok": true,
+            "detail": "stored cart currency USD, verified market currency USD"
+          },
+          {
+            "name": "visible.lineCount",
+            "ok": true,
+            "detail": "stored 1 line(s), visible 1 line(s) in cart-page"
+          },
+          {
+            "name": "visible.variant",
+            "ok": true,
+            "detail": "variant 50986339336450: stored \"M\", visible \"M\""
+          },
+          {
+            "name": "visible.quantity",
+            "ok": true,
+            "detail": "variant 50986339336450: stored qty 2, visible qty 2"
+          },
+          {
+            "name": "visible.currency",
+            "ok": true,
+            "detail": "variant 50986339336450: visible \"$38.00\" indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market USD"
+          },
+          {
+            "name": "visible.amount",
+            "ok": true,
+            "detail": "variant 50986339336450: stored line 3800 USD minor, visible 3800"
+          },
+          {
+            "name": "visible.badge",
+            "ok": true,
+            "detail": "stored item_count 2, badge 2"
+          },
+          {
+            "name": "visible.total.currency",
+            "ok": true,
+            "detail": "visible total \"$38.00 USD\" indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market USD"
+          },
+          {
+            "name": "visible.total",
+            "ok": true,
+            "detail": "stored total 3800, visible \"$38.00 USD\" -> 3800"
+          }
+        ],
+        "market": {
+          "verified": true,
+          "observedCountry": "US",
+          "observedCurrency": "USD",
+          "evidence": "in-session window.Shopify.country=US, window.Shopify.currency.active=USD"
+        },
+        "stored": {
+          "currency": "USD",
+          "itemCount": 2,
+          "totalMinor": 3800,
+          "lines": [
+            {
+              "variantId": 50986339336450,
+              "productTitle": "Smoke Tee",
+              "variantTitle": "M",
+              "quantity": 2,
+              "finalLinePriceMinor": 3800
+            }
+          ]
+        },
+        "visible": {
+          "surface": "cart-page",
+          "badgeDeclared": true,
+          "badgeCount": 2,
+          "totalText": "$38.00 USD",
+          "lines": [
+            {
+              "variantId": 50986339336450,
+              "title": "Smoke Tee",
+              "options": [
+                "M"
+              ],
+              "quantity": 2,
+              "priceText": "$38.00",
+              "parsed": {
+                "amountMinor": 3800,
+                "currencyCandidates": [
+                  "USD",
+                  "CAD",
+                  "AUD",
+                  "NZD",
+                  "MXN",
+                  "SGD",
+                  "HKD",
+                  "CLP",
+                  "COP",
+                  "ARS"
+                ]
+              }
+            }
+          ]
+        },
+        "durationMs": 26264,
+        "attempts": 1,
+        "casesConsumed": 1,
+        "engineVersion": "0.1.0+cb231be7",
+        "evidenceClass": "live-shopify",
+        "urls": [
+          "https://devstore-7c8d9245.myshopify.com/products/smoke-tee?variant=50986339336450"
+        ]
+      }
+    ]
+  }
+}
