@@ -1,12 +1,17 @@
 (function () {
   var C = window.MARKETCART_CONFIG || {};
   var API = C.API_URL || '';
-  // Attribution: ?src= wins and is kept for the session (first touch); otherwise the landing path names the source.
+  // Attribution: ?src= wins and is kept for the session; otherwise the LANDING page names the source (guide-<slug>,
+  // generator, direct) and is kept too, so later pages of the same visit report how the visitor arrived.
   function clip(s) { return String(s || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 40); }
   var paramSrc = clip(new URLSearchParams(location.search).get('src'));
-  var sessionSrc = null;
-  try { if (paramSrc) sessionStorage.setItem('mc_src', paramSrc); sessionSrc = sessionStorage.getItem('mc_src'); } catch (e) {}
   var pathSrc = /^\/guides\/([a-z0-9-]+)/.test(location.pathname) ? 'guide-' + RegExp.$1 : (/^\/tools\//.test(location.pathname) ? 'generator' : 'direct');
+  var sessionSrc = null;
+  try {
+    if (paramSrc) sessionStorage.setItem('mc_src', paramSrc);
+    else if (!sessionStorage.getItem('mc_src')) sessionStorage.setItem('mc_src', clip(pathSrc));
+    sessionSrc = sessionStorage.getItem('mc_src');
+  } catch (e) {}
   var src = paramSrc || clip(sessionSrc) || clip(pathSrc) || 'direct';
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
   // Anonymous random visitor id, rotated daily; never linked to a person. ?mc_self=1 marks our own browsers as excluded.

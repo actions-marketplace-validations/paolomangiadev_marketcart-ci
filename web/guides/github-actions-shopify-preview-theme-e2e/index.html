@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GitHub Actions: E2E cart test of a Shopify preview theme</title>
+<meta name="description" content="Push a branch as an unpublished theme and compare its cart with the live theme in CI: secrets, ownership, idempotent jobs, pacing, and what is not verified.">
+<link rel="canonical" href="https://marketcart-ci.pages.dev/guides/github-actions-shopify-preview-theme-e2e/">
+<meta name="robots" content="index,follow">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"GitHub Actions: E2E cart test of a Shopify preview theme","description":"Push a branch as an unpublished theme and compare its cart with the live theme in CI: secrets, ownership, idempotent jobs, pacing, and what is not verified.","url":"https://marketcart-ci.pages.dev/guides/github-actions-shopify-preview-theme-e2e/","datePublished":"2026-11-08","dateModified":"2026-11-08","about":["Shopify themes","Playwright","continuous integration"]}</script>
+<style>
+:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#5c5c57;--line:#e3e2dc;--card:#fff;--accent:#1f5fbf;--code:#f1f0ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 64px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:32px}
+a{color:var(--accent)}code,pre{background:var(--code);border-radius:6px;font:13px/1.5 ui-monospace,Consolas,monospace}code{padding:1px 5px}pre{padding:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}.tw{overflow-x:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0}.muted{color:var(--muted)}
+</style>
+</head>
+<body><main>
+<p class="muted"><a href="/">MarketCart CI</a> › Guides</p>
+<h1>GitHub Actions: E2E cart test of a Shopify preview theme before publishing</h1>
+<p><strong>Short answer:</strong> on each pull request, push the branch as an unpublished theme with Shopify CLI (<code>theme push --unpublished --json</code> returns the theme id and a <code>preview_url</code> of the form <code>https://your-store.myshopify.com/?preview_theme_id=ID</code>), run the same cart case against the live theme and against the preview, fail the job if the preview regresses, then delete the preview theme. Keep every credential in Actions secrets.</p>
+<h2>What is verified and what is not</h2>
+<div class="tw"><table><thead><tr><th>Part</th><th>Status</th></tr></thead><tbody>
+<tr><td>Password-protected development store (Dawn 16.1.1), cart page, storefront password sent from a secret</td><td>Verified live: paced suite 7/7 and hosted runs 2/2 (November 2026)</td></tr>
+<tr><td>Live vs candidate comparison, idempotent job id, pacing</td><td>Verified on the synthetic store and in the hosted service tests</td></tr>
+<tr><td><strong>Unpublished preview themes on a real store</strong></td><td><strong>Not verified.</strong> MarketCart CI keeps the <code>preview_theme_id</code> query parameter in case URLs and runs each side of a pair in its own fresh browser session, but we have not confirmed on a live store that Shopify keeps serving the preview theme through add-to-cart and <code>/cart.js</code> in that session</td></tr>
+</tbody></table></div>
+<p>Until that is verified, treat a preview-side result as a strong hint, and confirm once by hand: open the <code>preview_url</code> in a private window, add the product, and compare the drawer with <code>/cart.js</code>. If the preview banner disappears or the drawer shows the live theme's markup, the preview context did not persist and the candidate result is not meaningful for that store.</p>
+<h2>Prerequisites</h2>
+<ul><li>Secrets: <code>SHOPIFY_STORE</code> (your-store.myshopify.com), <code>SHOPIFY_CLI_THEME_TOKEN</code> (a Theme Access app password, which Shopify CLI reads from that variable), <code>MARKETCART_LICENSE</code>, and <code>MARKETCART_STOREFRONT_PASSWORD</code> only if the store is password-protected. GitHub does not pass secrets to workflows triggered from forks, so the job skips fork pull requests.</li>
+<li>Ownership: the hosted runner only checks stores that carry your verification meta tag in the live theme's <code>&lt;head&gt;</code> (one-time setup).</li>
+<li>A product URL with <code>?variant=</code> from your store.</li></ul>
+<h2>The workflow</h2>
+<pre><code>name: preview-theme-cart-check
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: preview-cart-${{ github.event.pull_request.number }}
+  cancel-in-progress: false  # never cancel a hosted job halfway; a re-run is a new job id
+jobs:
+  preview-cart:
+    # Fork pull requests get no secrets: skip instead of failing.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      SHOPIFY_FLAG_STORE: ${{ secrets.SHOPIFY_STORE }}                 # your-store.myshopify.com
+      SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}  # Theme Access app password
+      PRODUCT_PATH: /products/your-product?variant=1234567890          # a product of YOUR store
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Push this branch as a new unpublished theme
+        run: npx --yes @shopify/cli@5.0.1 theme push --unpublished --json --path . &gt; theme.json
+      - name: Write cases (live theme vs this preview)
+        run: |
+          mkdir -p marketcart
+          node -e '
+            const t = require(&quot;./theme.json&quot;).theme;
+            const host = process.env.SHOPIFY_FLAG_STORE;
+            const url = &quot;https://&quot; + host + process.env.PRODUCT_PATH;
+            const variantId = Number(new URL(url).searchParams.get(&quot;variant&quot;));
+            const sep = url.includes(&quot;?&quot;) ? &quot;&amp;&quot; : &quot;?&quot;;
+            const cases = { authorizedDomains: [host], cases: [{
+              id: &quot;pdp&quot;, market: { country: &quot;US&quot;, currency: &quot;USD&quot; },
+              lines: [{ url, variantId, quantity: 1 }],
+              candidate: { lines: [{ url: url + sep + &quot;preview_theme_id=&quot; + t.id, variantId, quantity: 1 }] } }] };
+            require(&quot;fs&quot;).writeFileSync(&quot;marketcart/cases.json&quot;, JSON.stringify(cases, null, 2));
+            require(&quot;fs&quot;).writeFileSync(&quot;theme-id.txt&quot;, String(t.id));'
+      - id: marketcart
+        uses: paolomangiadev/marketcart-ci@v0.2.0
+        with:
+          mode: remote
+          cases: marketcart/cases.json
+          license: ${{ secrets.MARKETCART_LICENSE }}
+          storefront-password: ${{ secrets.MARKETCART_STOREFRONT_PASSWORD }}
+          source: preview-ci
+      - name: Delete the preview theme
+        if: always()
+        run: test -f theme-id.txt &amp;&amp; npx --yes @shopify/cli@5.0.1 theme delete --theme &quot;$(cat theme-id.txt)&quot; --force || true</code></pre>
+<p>The case writer was run on the sample output that Shopify documents for <code>theme push --json</code>; for theme id <code>108267175958</code> it produces a candidate URL ending in <code>?variant=1234567890&amp;preview_theme_id=108267175958</code>.</p>
+<h2>Credits, retries and pacing</h2>
+<ul><li><strong>Idempotent jobs:</strong> the job id is derived from <code>GITHUB_RUN_ID</code> and <code>GITHUB_RUN_ATTEMPT</code>. Resending the same job (network retry) is not billed twice; re-running the workflow is a new attempt and a new job.</li>
+<li><strong>Billing:</strong> a pair uses 2 credits; only PASS and REGRESSION use credits, BLOCKED/UNSUPPORTED/ERROR are released.</li>
+<li><strong>Pacing:</strong> cart cycles on one store are spaced 15 s apart and <code>Retry-After</code> is honoured; a store that keeps answering 429 returns BLOCKED, never PASS. <code>concurrency</code> keeps pushes to the same pull request from piling up.</li>
+<li><strong>Isolation:</strong> each side runs in a new browser context: no cookies or cart carried over between live and preview.</li></ul>
+<h2>Expected output</h2>
+<pre><code>| Case | Status | ms | Reason |
+|---|---|---:|---|
+| pdp | PASS | … | live PASS, candidate PASS |
+
+exit code 0   (1 = the preview regressed, 2 = inconclusive, 3 = license/API problem)</code></pre>
+<p>The table shape is the CLI's real format; the row is illustrative, since this exact workflow has not been run against a real preview theme.</p>
+<h2>Troubleshooting</h2>
+<ul><li><code>theme push</code> asks for a theme: non-interactive runs need one of <code>--unpublished</code>, <code>--theme</code>, <code>--development</code> or <code>--live</code>.</li>
+<li>Unpublished themes pile up in the theme library, one per run: keep the delete step (<code>theme delete --theme ID --force</code>).</li>
+<li>Exit 3: license missing (fork pull request or secret not set) or the store's ownership tag not found.</li>
+<li>UNSUPPORTED on the candidate: the preview theme has no supported adapter, or the market was not served.</li></ul>
+<h2>Limits</h2>
+<p>Dawn family and Horizon 4.4 only. Live preview themes not verified (above). Never opens checkout, never edits store settings.</p>
+<p class="muted">Sources: Shopify CLI <em>theme push</em>, <em>theme share</em>, <em>theme delete</em> (shopify.dev, read 2026-11-08); GitHub Docs, <em>Using secrets in GitHub Actions</em>.</p>
+<p>Next steps: the <a href="/tools/github-action-generator/">workflow generator</a> writes a ready GitHub Actions file; the <a href="https://gist.github.com/paolomangiadev/8df461ab021b181bd49a1ad626524f3a">workflow Gist</a> has demo, own-store and hosted jobs side by side; <code>npx github:paolomangiadev/marketcart-ci#v0.2.1 demo</code> runs the synthetic demo locally (Node.js 22.18+ and Git; run <code>npx github:paolomangiadev/marketcart-ci#v0.2.1 setup-browser</code> once first). Hosted runs for password-protected development stores: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a>, optional.</p>
+<div class="card"><strong>Try it:</strong> run the <a href="/#demo">free demo</a> (synthetic store, no account), check <a href="/#free-check">one case on your own store for free</a>, or use the <a href="https://github.com/paolomangiadev/marketcart-ci">open-source CLI and GitHub Action</a> locally. Hosted runs: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a> (30 days, no subscription).</div>
+<p class="muted">Related: <a href="/tools/github-action-generator/">workflow generator</a> · <a href="/guides/shopify-dawn-cart-drawer-not-updating/">Dawn drawer not updating</a> · <a href="/guides/shopify-horizon-playwright-test/">Horizon Playwright test</a> · <a href="/guides/shopify-cart-js-422-429-test/">cart.js 422 vs 429</a> · <a href="/guides/shopify-markets-currency-mismatch-cart-total-test/">Markets currency mismatch</a> · <a href="/guides/shopify-ajax-cart-drawer-web-components-playwright/">drawer web components</a> · <a href="/guides/shopify-theme-check-vs-playwright-cart-e2e/">Theme Check vs E2E</a> · <a href="/guides/github-actions-shopify-preview-theme-e2e/">preview-theme CI</a></p>
+<p class="muted">Updated 2026-11-08. Evidence: <a href="https://github.com/paolomangiadev/marketcart-ci/tree/main/evidence">repository evidence folder</a>.</p>
+</main>
+<script src="/config.js"></script>
+<script src="/app.js"></script>
+</body></html>

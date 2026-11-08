@@ -11,7 +11,11 @@
 - [Guide: Shopify Horizon theme Playwright cart test](https://marketcart-ci.pages.dev/guides/shopify-horizon-playwright-test/)
 - [Guide: Shopify cart.js 422 vs 429 — what to retry in a cart test](https://marketcart-ci.pages.dev/guides/shopify-cart-js-422-429-test/)
 - [Guide: Shopify Markets currency mismatch in the cart](https://marketcart-ci.pages.dev/guides/shopify-markets-currency-mismatch-cart-total-test/)
+- [Guide: Testing Shopify cart drawer web components with Playwright (Dawn, Horizon)](https://marketcart-ci.pages.dev/guides/shopify-ajax-cart-drawer-web-components-playwright/)
+- [Guide: Shopify Theme Check vs Playwright cart E2E](https://marketcart-ci.pages.dev/guides/shopify-theme-check-vs-playwright-cart-e2e/)
+- [Guide: GitHub Actions E2E cart test of a Shopify preview theme](https://marketcart-ci.pages.dev/guides/github-actions-shopify-preview-theme-e2e/)
 - [Tool: GitHub Actions workflow generator](https://marketcart-ci.pages.dev/tools/github-action-generator/)
+- Quickstart without cloning (Node.js 22.18+ and Git): `npx github:paolomangiadev/marketcart-ci#v0.2.1 setup-browser`, then `npx github:paolomangiadev/marketcart-ci#v0.2.1 demo`
 
 ## Product
 - [Buy 100 hosted cases (EUR 19)](https://payhip.com/b/er1iY)

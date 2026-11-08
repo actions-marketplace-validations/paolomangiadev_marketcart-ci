@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopify Theme Check vs Playwright cart E2E: what each one catches</title>
+<meta name="description" content="Theme Check lints Liquid and JSON; a browser test sees runtime cart state. A reproducible stale-drawer case and a workflow running both.">
+<link rel="canonical" href="https://marketcart-ci.pages.dev/guides/shopify-theme-check-vs-playwright-cart-e2e/">
+<meta name="robots" content="index,follow">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Shopify Theme Check vs Playwright cart E2E: what each one catches","description":"Theme Check lints Liquid and JSON; a browser test sees runtime cart state. A reproducible stale-drawer case and a workflow running both.","url":"https://marketcart-ci.pages.dev/guides/shopify-theme-check-vs-playwright-cart-e2e/","datePublished":"2026-11-08","dateModified":"2026-11-08","about":["Shopify themes","Playwright","continuous integration"]}</script>
+<style>
+:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#5c5c57;--line:#e3e2dc;--card:#fff;--accent:#1f5fbf;--code:#f1f0ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 64px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:32px}
+a{color:var(--accent)}code,pre{background:var(--code);border-radius:6px;font:13px/1.5 ui-monospace,Consolas,monospace}code{padding:1px 5px}pre{padding:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}.tw{overflow-x:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0}.muted{color:var(--muted)}
+</style>
+</head>
+<body><main>
+<p class="muted"><a href="/">MarketCart CI</a> › Guides</p>
+<h1>Shopify Theme Check vs Playwright cart E2E: what each one catches</h1>
+<p><strong>Short answer:</strong> Theme Check is a static linter for the Liquid and JSON in your theme; it never runs the theme in a browser. A browser test runs the theme against a store and sees runtime state, such as whether the cart drawer shows what <code>/cart.js</code> stored. They catch different classes of bugs, so run both: Theme Check first (fast, no store), the cart E2E check second.</p>
+<h2>What each one looks at</h2>
+<div class="tw"><table><thead><tr><th></th><th>Theme Check</th><th>Cart E2E (Playwright)</th></tr></thead><tbody>
+<tr><td>Input</td><td>theme source files (Liquid, JSON)</td><td>a running storefront</td></tr>
+<tr><td>Finds (per Shopify's docs / by design)</td><td>syntax errors, missing templates, unused variables and snippets, unknown and deprecated tags, performance issues</td><td>stored cart vs visible drawer: missing line, wrong variant, quantity, price, currency, badge, total</td></tr>
+<tr><td>Needs</td><td>Shopify CLI, no store</td><td>a store you control (or a fixture), a browser</td></tr>
+<tr><td>Cannot see</td><td>JavaScript behaviour, section responses at runtime, app scripts, the store's data</td><td>code paths it does not exercise; themes it has no adapter for</td></tr>
+</tbody></table></div>
+<p>Shopify CLI runs it as <code>shopify theme check</code>; <code>--fail-level</code> sets the minimum severity that makes the command exit with an error code, and <code>--output</code> selects the output format.</p>
+<h2>A reproducible case where valid source still shows a stale cart</h2>
+<p>Dawn's add-to-cart asks <code>/cart/add</code> to return the re-rendered <code>cart-drawer</code> and <code>cart-icon-bubble</code> sections, and <code>cart-drawer.js</code> swaps them in. If a customization renames the drawer section, or an app script replaces the drawer element, every Liquid and JSON file can still be valid while the drawer is no longer updated. The failure lives in JavaScript and in the runtime section response, which is outside what Theme Check analyzes according to its documentation. A browser check sees it immediately. Our synthetic store reproduces the symptom: on the <a href="https://marketcart-fixture.pages.dev/k/dawn16-drawer/s/stale-drawer/products/linen-shirt?variant=4101&amp;country=IE">stale-drawer page</a> the add returns 200 and <code>/cart.js</code> has one line, but the drawer shows none; the <a href="https://marketcart-fixture.pages.dev/k/dawn16-drawer/s/healthy/products/linen-shirt?variant=4101&amp;country=IE">healthy page</a> is identical except for the swap. We do not claim a Theme Check run on any particular theme here; the point is the category of bug, not a scorecard.</p>
+<h2>Run both in GitHub Actions</h2>
+<pre><code>name: theme-quality
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  theme-check:
+    # Static: Liquid and JSON linting of the theme source. No store, no browser, no secrets.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npx --yes @shopify/cli@5.0.1 theme check --path . --fail-level error
+  cart-e2e:
+    # Runtime: a real browser adds a product and compares /cart.js with the drawer the shopper sees.
+    # The demo job proves the runner works with no account; replace it with mode: remote for your store.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: paolomangiadev/marketcart-ci@v0.2.0
+        with:
+          mode: demo</code></pre>
+<p>The <code>cart-e2e</code> job above runs the no-account demo (a synthetic store with planted bugs; it exits 0 when each planted case behaves as expected). For your store use <code>mode: remote</code> with a cases file and the license as a secret (the <a href="/tools/github-action-generator/">generator</a> writes it), or check a public store for free on the runner's own browser: <code>npx github:paolomangiadev/marketcart-ci#v0.2.1 check marketcart/cases.json</code>.</p>
+<h2>Expected output of the E2E job</h2>
+<pre><code>| C01 | PASS | PASS | stored == visible across 1 line(s), market IE/EUR verified in-session |
+| C05 | REGRESSION | REGRESSION | stored 1 line(s), visible 0 line(s) in drawer; stored line Linen Shirt (Red / M, variant 4101) not visible |
+| C16 | REGRESSION | REGRESSION | candidate regressed (live PASS) |</code></pre>
+<h2>Troubleshooting</h2>
+<ul><li>Theme Check fails on warnings you accept: raise <code>--fail-level</code> or configure checks in <code>.theme-check.yml</code> (<code>shopify theme check --init</code> generates one).</li>
+<li>E2E returns UNSUPPORTED: the theme has no adapter (Dawn family and Horizon 4.4 only) or the requested market was not served. That is "not verified", not a pass.</li>
+<li>E2E returns BLOCKED: Shopify kept answering HTTP 429; space runs out and do not run many stores in parallel.</li></ul>
+<h2>Limits</h2>
+<p>An E2E check only covers the flows it runs (here: add to cart and read the cart surface) and does not find every bug. MarketCart CI supports Dawn-family themes and Horizon 4.4; live-verified so far on a Dawn 16.1.1 cart page.</p>
+<p class="muted">Sources: Shopify, <em>Theme Check</em> and <em>Shopify CLI: theme check</em> (shopify.dev, read 2026-11-08); Shopify/dawn v16.1.1 <code>assets/cart-drawer.js</code> and <code>assets/product-form.js</code>.</p>
+<p>Next steps: the <a href="/tools/github-action-generator/">workflow generator</a> writes a ready GitHub Actions file; the <a href="https://gist.github.com/paolomangiadev/8df461ab021b181bd49a1ad626524f3a">workflow Gist</a> has demo, own-store and hosted jobs side by side; <code>npx github:paolomangiadev/marketcart-ci#v0.2.1 demo</code> runs the synthetic demo locally (Node.js 22.18+ and Git; run <code>npx github:paolomangiadev/marketcart-ci#v0.2.1 setup-browser</code> once first). Hosted runs for password-protected development stores: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a>, optional.</p>
+<div class="card"><strong>Try it:</strong> run the <a href="/#demo">free demo</a> (synthetic store, no account), check <a href="/#free-check">one case on your own store for free</a>, or use the <a href="https://github.com/paolomangiadev/marketcart-ci">open-source CLI and GitHub Action</a> locally. Hosted runs: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a> (30 days, no subscription).</div>
+<p class="muted">Related: <a href="/tools/github-action-generator/">workflow generator</a> · <a href="/guides/shopify-dawn-cart-drawer-not-updating/">Dawn drawer not updating</a> · <a href="/guides/shopify-horizon-playwright-test/">Horizon Playwright test</a> · <a href="/guides/shopify-cart-js-422-429-test/">cart.js 422 vs 429</a> · <a href="/guides/shopify-markets-currency-mismatch-cart-total-test/">Markets currency mismatch</a> · <a href="/guides/shopify-ajax-cart-drawer-web-components-playwright/">drawer web components</a> · <a href="/guides/shopify-theme-check-vs-playwright-cart-e2e/">Theme Check vs E2E</a> · <a href="/guides/github-actions-shopify-preview-theme-e2e/">preview-theme CI</a></p>
+<p class="muted">Updated 2026-11-08. Evidence: <a href="https://github.com/paolomangiadev/marketcart-ci/tree/main/evidence">repository evidence folder</a>.</p>
+</main>
+<script src="/config.js"></script>
+<script src="/app.js"></script>
+</body></html>

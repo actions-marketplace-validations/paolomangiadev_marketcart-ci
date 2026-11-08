@@ -54,6 +54,9 @@ jobs:
           npx --no-install marketcart-ci setup-browser --with-deps
           npx --no-install marketcart-ci demo
       - name: npx from this commit's Git source
+        # abbreviated SHA: npm 10 (Node 22) fails on a full 40-character SHA with "GitFetcher requires an Arborist
+        # constructor"; tags, short SHAs and the default branch work on npm 10 and 11
         run: |
           cd "$RUNNER_TEMP"
-          npx --yes --cache "$RUNNER_TEMP/npx-cache" github:${{ github.repository }}#${{ github.sha }} --help
+          npx --yes --cache "$RUNNER_TEMP/npx-cache" github:${{ github.repository }}#${GITHUB_SHA::12} --help
+          npx --yes --cache "$RUNNER_TEMP/npx-cache" github:${{ github.repository }}#v0.2.1 --version

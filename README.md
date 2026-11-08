@@ -20,7 +20,7 @@ npx github:paolomangiadev/marketcart-ci#v0.2.1 setup-browser   # once: headless 
 npx github:paolomangiadev/marketcart-ci#v0.2.1 demo            # 3 seeded cases on a local synthetic store
 ```
 
-Without arguments it prints help and does nothing billable. `setup-browser --with-deps` also installs the Linux system libraries (CI runners). `#v0.2.1` pins the command-line wrapper release; the check engine inside it is unchanged since v0.2.0. A downloadable tarball with its SHA-256 is attached to the [v0.2.1 release](https://github.com/paolomangiadev/marketcart-ci/releases/tag/v0.2.1) (`npm install ./marketcart-ci-0.2.1.tgz`).
+Without arguments it prints help and does nothing billable. `setup-browser --with-deps` also installs the Linux system libraries (CI runners). Pin by tag (`#v0.2.1`) or an abbreviated commit SHA: a full 40-character SHA fails on npm 10 (Node 22's bundled npm) with "GitFetcher requires an Arborist constructor". `#v0.2.1` pins the command-line wrapper release; the check engine inside it is unchanged since v0.2.0. A downloadable tarball with its SHA-256 is attached to the [v0.2.1 release](https://github.com/paolomangiadev/marketcart-ci/releases/tag/v0.2.1) (`npm install ./marketcart-ci-0.2.1.tgz`).
 
 From a clone (Node.js 22.18+ runs the TypeScript sources directly):
 
@@ -102,6 +102,8 @@ web/               static checker page
 ## Hosted checks and pricing
 
 Workflow generator (copy-paste GitHub Actions YAML): https://marketcart-ci.pages.dev/tools/github-action-generator/?src=github-readme · Guides: https://marketcart-ci.pages.dev/guides/shopify-dawn-cart-drawer-not-updating/?src=github-readme · https://marketcart-ci.pages.dev/guides/shopify-cart-js-422-429-test/?src=github-readme · https://marketcart-ci.pages.dev/guides/shopify-markets-currency-mismatch-cart-total-test/?src=github-readme · https://marketcart-ci.pages.dev/guides/shopify-ajax-cart-drawer-web-components-playwright/?src=github-readme · https://marketcart-ci.pages.dev/guides/shopify-theme-check-vs-playwright-cart-e2e/?src=github-readme · https://marketcart-ci.pages.dev/guides/github-actions-shopify-preview-theme-e2e/?src=github-readme
+
+Standalone snippets (Gists): [cart drawer test workflow, Dawn + Horizon](https://gist.github.com/paolomangiadev/8df461ab021b181bd49a1ad626524f3a) · [Markets currency parity check, TypeScript](https://gist.github.com/paolomangiadev/666b9a370c2ad345370ddb3d79b28c8e)
 Checker, live demo and one free case per store: https://marketcart-ci.pages.dev/?src=github-readme · machine-readable docs: https://marketcart-ci.pages.dev/llms.txt?src=github-readme
 
 **EUR 19 = 100 completed hosted cases**, valid 30 days from activation (https://payhip.com/b/er1iY). Only `PASS`/`REGRESSION` use credits. A live/candidate pair uses 2. No subscription. The license key is delivered automatically by Payhip and verified on every job; refunds disable it. The hosted service runs the same engine in Cloudflare Browser Run with a D1 credit ledger (`service/`).

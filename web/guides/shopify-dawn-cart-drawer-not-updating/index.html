@@ -57,6 +57,9 @@ await browser.close();</code></pre>
 <pre><code>git clone https://github.com/paolomangiadev/marketcart-ci && cd marketcart-ci
 npm ci && npx playwright-core install chromium-headless-shell
 node integrations/cli/marketcart.ts demo</code></pre>
+<p>Or without cloning (Node.js 22.18+ and Git; downloads the package from GitHub, nothing runs at install time):</p>
+<pre><code>npx github:paolomangiadev/marketcart-ci#v0.2.1 setup-browser   # once: headless Chromium
+npx github:paolomangiadev/marketcart-ci#v0.2.1 demo</code></pre>
 <p>Actual output for the stale case: <code>REGRESSION — stored 1 line(s), visible 0 line(s) in drawer; stored line Linen Shirt (Red / M, variant 4101) not visible</code>. MarketCart also compares variant, quantity, line price, currency of the market the session actually got, the header badge and the total, and returns JSON plus an exit code (0 PASS, 1 REGRESSION, 2 inconclusive).</p>
 <p>In GitHub Actions:</p>
 <pre><code>- uses: paolomangiadev/marketcart-ci@v0
@@ -77,7 +80,7 @@ node integrations/cli/marketcart.ts demo</code></pre>
 <h2>Limits</h2>
 <p>Dawn-family and Horizon 4.4 markup only; other themes return UNSUPPORTED. The synthetic fixture is written by the same author as the engine, so it proves which bug classes are detected, not that every store behaves alike.</p>
 <div class="card"><strong>Try it:</strong> run the <a href="/#demo">free demo</a> (synthetic store, no account), check <a href="/#free-check">one case on your own store for free</a>, or use the <a href="https://github.com/paolomangiadev/marketcart-ci">open-source CLI and GitHub Action</a> locally. Hosted runs: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a> (30 days, no subscription).</div>
-<p class="muted">Related: <a href="/tools/github-action-generator/">workflow generator</a> · <a href="/guides/shopify-dawn-cart-drawer-not-updating/">Dawn drawer not updating</a> · <a href="/guides/shopify-horizon-playwright-test/">Horizon Playwright test</a> · <a href="/guides/shopify-cart-js-422-429-test/">cart.js 422 vs 429</a> · <a href="/guides/shopify-markets-currency-mismatch-cart-total-test/">Markets currency mismatch</a></p>
+<p class="muted">Related: <a href="/tools/github-action-generator/">workflow generator</a> · <a href="/guides/shopify-dawn-cart-drawer-not-updating/">Dawn drawer not updating</a> · <a href="/guides/shopify-horizon-playwright-test/">Horizon Playwright test</a> · <a href="/guides/shopify-cart-js-422-429-test/">cart.js 422 vs 429</a> · <a href="/guides/shopify-markets-currency-mismatch-cart-total-test/">Markets currency mismatch</a> · <a href="/guides/shopify-ajax-cart-drawer-web-components-playwright/">drawer web components</a> · <a href="/guides/shopify-theme-check-vs-playwright-cart-e2e/">Theme Check vs E2E</a> · <a href="/guides/github-actions-shopify-preview-theme-e2e/">preview-theme CI</a></p>
 <p class="muted">Updated 2026-11-08. Evidence: <a href="https://github.com/paolomangiadev/marketcart-ci/tree/main/evidence">repository evidence folder</a>.</p>
 </main>
 <script src="/config.js"></script>

@@ -32,8 +32,9 @@ Optional per case: `"checks": { "badge": true|false, "total": true|false }` (tot
 `{ caseId, kind: "single"|"pair", status, reason, checks: [{ name, ok, detail }], market: { verified, observedCountry, observedCurrency }, stored: { currency, itemCount, totalMinor, lines[] }, visible: { surface, lines[], badgeCount, totalText }, durationMs, attempts, casesConsumed }`. Exit codes: 0 all PASS, 1 any REGRESSION, 2 any inconclusive, 3 license/auth error.
 
 ## Usage
-- Demo, no key: `node integrations/cli/marketcart.ts demo`
-- Local check of your own store: `node engine/cli.ts check cases.json`
+- Demo, no key, no clone (Node.js 22.18+ and Git): `npx github:paolomangiadev/marketcart-ci#v0.2.1 setup-browser` once, then `npx github:paolomangiadev/marketcart-ci#v0.2.1 demo`. Without arguments it prints help; nothing runs at install time. v0.2.1 is the command-line wrapper release; the engine is unchanged since v0.2.0. Pin by tag or abbreviated SHA (a full 40-character SHA fails on npm 10).
+- From a clone: `node integrations/cli/marketcart.ts demo`
+- Local check of your own store (free, your browser): `npx github:paolomangiadev/marketcart-ci#v0.2.1 check cases.json` (or `node engine/cli.ts check cases.json` in a clone)
 - Hosted: `MARKETCART_LICENSE=... node integrations/cli/marketcart.ts remote cases.json` (prove store control first: GET /v1/domain-token?host=... with the license in the Authorization header, paste the meta tag into theme.liquid <head>).
 - GitHub Action: `uses: paolomangiadev/marketcart-ci@v0` with `mode: remote`, `cases: cases.json`, `license: ${{ secrets.MARKETCART_LICENSE }}`.
 - Free hosted check: one completed case per verified store (POST /v1/free-check), while the global daily free budget lasts.

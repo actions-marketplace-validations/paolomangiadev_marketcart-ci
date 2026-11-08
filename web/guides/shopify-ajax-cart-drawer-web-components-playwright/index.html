@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testing Shopify cart drawer web components with Playwright (Dawn, Horizon)</title>
+<meta name="description" content="Dawn &lt;cart-drawer&gt; and Horizon 4.4 &lt;theme-drawer&gt; markup, scoped selectors, waiting for the rendered drawer state, and why /cart hides a stale drawer.">
+<link rel="canonical" href="https://marketcart-ci.pages.dev/guides/shopify-ajax-cart-drawer-web-components-playwright/">
+<meta name="robots" content="index,follow">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Testing Shopify cart drawer web components with Playwright (Dawn, Horizon)","description":"Dawn <cart-drawer> and Horizon 4.4 <theme-drawer> markup, scoped selectors, waiting for the rendered drawer state, and why /cart hides a stale drawer.","url":"https://marketcart-ci.pages.dev/guides/shopify-ajax-cart-drawer-web-components-playwright/","datePublished":"2026-11-08","dateModified":"2026-11-08","about":["Shopify themes","Playwright","continuous integration"]}</script>
+<style>
+:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#5c5c57;--line:#e3e2dc;--card:#fff;--accent:#1f5fbf;--code:#f1f0ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 64px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:32px}
+a{color:var(--accent)}code,pre{background:var(--code);border-radius:6px;font:13px/1.5 ui-monospace,Consolas,monospace}code{padding:1px 5px}pre{padding:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}.tw{overflow-x:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0}.muted{color:var(--muted)}
+</style>
+</head>
+<body><main>
+<p class="muted"><a href="/">MarketCart CI</a> › Guides</p>
+<h1>Testing Shopify cart drawer web components with Playwright (Dawn &lt;cart-drawer&gt;, Horizon &lt;theme-drawer&gt;)</h1>
+<p><strong>Short answer:</strong> scope every selector to the drawer element, wait for the drawer's <em>rendered</em> state (open, one visible row per stored line) instead of a fixed sleep, compare it with <code>/cart.js</code> fetched in the same session, and never navigate to <code>/cart</code> to "check the cart": the cart page is rendered fresh by the server and hides a stale drawer.</p>
+<h2>What the drawer actually is</h2>
+<p><strong>Dawn 16.1.1</strong> (<code>snippets/cart-drawer.liquid</code>, <code>assets/cart-drawer.js</code>): a custom element <code>&lt;cart-drawer class="drawer"&gt;</code> wrapping <code>&lt;div id="CartDrawer" class="cart-drawer"&gt;</code> and <code>&lt;cart-drawer-items&gt;</code>; it gets <code>is-empty</code> while the cart is empty. Opening adds the class <code>active</code>. After <em>Add to cart</em>, <code>product-form.js</code> posts to <code>/cart/add</code> with a <code>sections</code> parameter listing the drawer's sections (<code>cart-drawer</code>, <code>cart-icon-bubble</code>) and <code>sections_url</code>; <code>CartDrawer.renderContents()</code> swaps the returned HTML into <code>#CartDrawer</code> and the header bubble, then calls <code>open()</code>. The header icon <code>#cart-icon-bubble</code> opens the drawer on click.</p>
+<p><strong>Horizon 4.4.0</strong> (<code>snippets/cart-drawer.liquid</code> at the v4.4.0 commit): the drawer is rendered only when the theme setting <code>cart_type</code> is <code>drawer</code> and the template is not <code>cart</code>. Markup: <code>&lt;theme-drawer id="cart-drawer"&gt;</code> &gt; native <code>&lt;dialog class="theme-drawer__dialog"&gt;</code> &gt; <code>&lt;cart-drawer-component&gt;</code>, which carries <code>auto-open</code> only when <code>auto_open_cart_drawer</code> is enabled. <code>assets/theme-drawer.js</code> opens the panel with <code>showModal()</code>, so "open" means <code>dialog.open === true</code>. Rows are <code>tr.cart-items__table-row</code>.</p>
+<div class="tw"><table><thead><tr><th></th><th>Dawn 15/16</th><th>Horizon 4.4</th></tr></thead><tbody>
+<tr><td>Drawer root</td><td><code>cart-drawer</code></td><td><code>theme-drawer#cart-drawer dialog</code></td></tr>
+<tr><td>Open when</td><td>class <code>active</code></td><td><code>dialog.open</code> (showModal)</td></tr>
+<tr><td>Rows</td><td><code>cart-drawer .cart-item</code></td><td><code>tr.cart-items__table-row:not(.cart-items__nested-line)</code></td></tr>
+<tr><td>Open it like a shopper</td><td><code>#cart-icon-bubble</code></td><td><code>button[aria-controls="cart-drawer"]</code></td></tr>
+<tr><td>Only rendered if</td><td>cart type drawer</td><td><code>cart_type == 'drawer'</code>, not on the cart template</td></tr>
+</tbody></table></div>
+<h2>A complete check</h2>
+<pre><code>// Cart drawer vs /cart.js for Dawn 15/16 (&lt;cart-drawer&gt;) and Horizon 4.4 (&lt;theme-drawer id=&quot;cart-drawer&quot;&gt;&lt;dialog&gt;).
+// npm i playwright-core@1.64.1 &amp;&amp; npx playwright-core install chromium-headless-shell
+// node drawer-check.mjs &quot;https://&lt;store&gt;/products/&lt;handle&gt;?variant=&lt;id&gt;&quot;
+import { chromium } from 'playwright-core';
+
+const THEMES = {
+  dawn: { add: 'product-form button[name=&quot;add&quot;]', drawer: 'cart-drawer', trigger: '#cart-icon-bubble', rows: 'cart-drawer .cart-item' },
+  horizon: {
+    add: 'add-to-cart-component button[name=&quot;add&quot;], product-form-component button[name=&quot;add&quot;]',
+    drawer: 'theme-drawer#cart-drawer dialog',
+    trigger: 'button[aria-controls=&quot;cart-drawer&quot;], [data-testid=&quot;cart-drawer-trigger&quot;]',
+    rows: 'theme-drawer#cart-drawer dialog tr.cart-items__table-row:not(.cart-items__nested-line)',
+  },
+};
+const isOpen = (sel) =&gt; { const d = document.querySelector(sel); return !!d &amp;&amp; (d.classList.contains('active') || d.hasAttribute('open') || d.open === true); };
+
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto(process.argv[2]);
+const schema = await page.evaluate(() =&gt; window.Shopify?.theme?.schema_name ?? '');
+const t = schema.toLowerCase() === 'horizon' ? THEMES.horizon : THEMES.dawn;
+if ((await page.locator(t.drawer).count()) === 0) throw new Error('no cart drawer on this page (cart type &quot;page&quot;): test the cart page instead, deliberately');
+
+const added = page.waitForResponse((r) =&gt; /\/cart\/add(\.js)?$/.test(new URL(r.url()).pathname));
+await page.click(t.add);
+const status = (await added).status(); // 200 = Shopify stored it; 422 = rejected (sold out, quantity), 429 = throttled
+const stored = await page.evaluate(async () =&gt; (await fetch(window.Shopify.routes.root + 'cart.js')).json());
+
+// Wait for the RENDERED state instead of a fixed sleep: drawer open and one visible row per stored line.
+// If the theme never re-renders the drawer, this times out and the check reports what is actually on screen.
+const want = stored.items.length;
+const rendered = await page
+  .waitForFunction(({ drawer, rows, want }) =&gt; {
+    const d = document.querySelector(drawer);
+    const open = !!d &amp;&amp; (d.classList.contains('active') || d.hasAttribute('open') || d.open === true);
+    return open &amp;&amp; [...document.querySelectorAll(rows)].filter((r) =&gt; r.getClientRects().length).length === want;
+  }, { drawer: t.drawer, rows: t.rows, want }, { timeout: 5000 })
+  .then(() =&gt; true, () =&gt; false);
+if (!(await page.evaluate(isOpen, t.drawer))) await page.click(t.trigger); // auto-open off: open it like a shopper
+
+const visibleRows = await page.locator(t.rows).filter({ visible: true }).count();
+const ok = status === 200 &amp;&amp; visibleRows === want;
+console.log({ theme: schema, addStatus: status, storedLines: want, storedQty: stored.items.map((i) =&gt; i.quantity), drawerRendered: rendered, visibleRows, result: ok ? 'PASS' : 'REGRESSION' });
+await browser.close();
+process.exitCode = ok ? 0 : 1;</code></pre>
+<h2>Expected output</h2>
+<p>Run on our <strong>synthetic</strong> storefront (Dawn 16.1.1 and Horizon 4.4.0 markup, one planted defect per scenario, not a real shop) on 2026-11-08:</p>
+<div class="tw"><table><thead><tr><th>Page</th><th>Result</th></tr></thead><tbody>
+<tr><td><a href="https://marketcart-fixture.pages.dev/k/dawn16-drawer/s/healthy/products/linen-shirt?variant=4101&amp;country=IE">Dawn healthy</a></td><td><code>drawerRendered: true, visibleRows: 1, result: 'PASS'</code>, exit 0</td></tr>
+<tr><td><a href="https://marketcart-fixture.pages.dev/k/dawn16-drawer/s/stale-drawer/products/linen-shirt?variant=4101&amp;country=IE">Dawn stale drawer</a></td><td><code>addStatus: 200, storedLines: 1, drawerRendered: false, visibleRows: 0, result: 'REGRESSION'</code>, exit 1</td></tr>
+<tr><td><a href="https://marketcart-fixture.pages.dev/k/horizon44-drawer/s/healthy/products/linen-shirt?variant=4101&amp;country=IE">Horizon healthy</a></td><td><code>result: 'PASS'</code>, exit 0</td></tr>
+<tr><td><a href="https://marketcart-fixture.pages.dev/k/horizon44-drawer/s/stale-drawer/products/linen-shirt?variant=4101&amp;country=IE">Horizon stale drawer</a></td><td><code>visibleRows: 0, result: 'REGRESSION'</code>, exit 1</td></tr>
+<tr><td><a href="https://marketcart-fixture.pages.dev/k/dawn15-drawer/s/drawer-no-open/products/linen-shirt?variant=4101&amp;country=IE">Drawer that does not auto-open</a></td><td><code>drawerRendered: false</code>, then opened from the header icon: <code>visibleRows: 1, result: 'PASS'</code></td></tr>
+</tbody></table></div>
+<h2>Why /cart hides the bug</h2>
+<p>The stale-drawer failure is a client-side swap that did not happen: the add succeeded (HTTP 200, <code>/cart.js</code> has the line) but the section HTML never replaced the drawer, for example because a customization renamed a section the drawer requests or an app script replaced the drawer markup. Loading <code>/cart</code> asks the server for a fresh render of the stored cart, so it shows the right line and the test passes while shoppers still see "Your cart is empty".</p>
+<h2>Troubleshooting</h2>
+<ul><li><strong>Timeout waiting for rows on a healthy store:</strong> the drawer may not auto-open (Horizon: <code>auto_open_cart_drawer</code> off). Open it from the header control, as above, before reading it.</li>
+<li><strong>Rows found but zero visible:</strong> templates (<code>&lt;template id="empty-cart-template"&gt;</code> in Horizon) and closed drawers contain markup too. Count only rows with client rects.</li>
+<li><strong>Shadow DOM:</strong> the drawer elements above live in the light DOM (no <code>attachShadow</code> in Dawn's <code>cart-drawer.js</code> or Horizon's <code>theme-drawer.js</code>/<code>cart-drawer.js</code>); Playwright CSS selectors would also pierce open shadow roots.</li>
+<li><strong>422 on add:</strong> Shopify rejected the add (sold out, quantity over stock, unknown variant); see <a href="/guides/shopify-cart-js-422-429-test/">422 vs 429</a>. <strong>429:</strong> you are adding too fast; space runs out.</li></ul>
+<h2>Limits</h2>
+<p>Selectors checked against Dawn v15.4.1/v16.1.1 and Horizon v4.4.0 source; other versions and themes may differ. Results above come from synthetic markup; MarketCart CI's live verification so far is a Dawn 16.1.1 cart page, the Dawn drawer and Horizon live checks are not verified yet. This script checks line counts only; MarketCart CI adds variant, quantity, price, currency, badge and total (for currency see the <a href="https://gist.github.com/paolomangiadev/666b9a370c2ad345370ddb3d79b28c8e">currency parity Gist</a>).</p>
+<p>Next steps: the <a href="/tools/github-action-generator/">workflow generator</a> writes a ready GitHub Actions file; the <a href="https://gist.github.com/paolomangiadev/8df461ab021b181bd49a1ad626524f3a">workflow Gist</a> has demo, own-store and hosted jobs side by side; <code>npx github:paolomangiadev/marketcart-ci#v0.2.1 demo</code> runs the synthetic demo locally (Node.js 22.18+ and Git; run <code>npx github:paolomangiadev/marketcart-ci#v0.2.1 setup-browser</code> once first). Hosted runs for password-protected development stores: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a>, optional.</p>
+<div class="card"><strong>Try it:</strong> run the <a href="/#demo">free demo</a> (synthetic store, no account), check <a href="/#free-check">one case on your own store for free</a>, or use the <a href="https://github.com/paolomangiadev/marketcart-ci">open-source CLI and GitHub Action</a> locally. Hosted runs: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a> (30 days, no subscription).</div>
+<p class="muted">Related: <a href="/tools/github-action-generator/">workflow generator</a> · <a href="/guides/shopify-dawn-cart-drawer-not-updating/">Dawn drawer not updating</a> · <a href="/guides/shopify-horizon-playwright-test/">Horizon Playwright test</a> · <a href="/guides/shopify-cart-js-422-429-test/">cart.js 422 vs 429</a> · <a href="/guides/shopify-markets-currency-mismatch-cart-total-test/">Markets currency mismatch</a> · <a href="/guides/shopify-ajax-cart-drawer-web-components-playwright/">drawer web components</a> · <a href="/guides/shopify-theme-check-vs-playwright-cart-e2e/">Theme Check vs E2E</a> · <a href="/guides/github-actions-shopify-preview-theme-e2e/">preview-theme CI</a></p>
+<p class="muted">Updated 2026-11-08. Evidence: <a href="https://github.com/paolomangiadev/marketcart-ci/tree/main/evidence">repository evidence folder</a>.</p>
+</main>
+<script src="/config.js"></script>
+<script src="/app.js"></script>
+</body></html>
