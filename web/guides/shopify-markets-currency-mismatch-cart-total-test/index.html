@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopify Markets currency mismatch in the cart: test stored vs visible currency and totals</title>
+<meta name="description" content="Stored vs visible cart currency and totals under Shopify Markets, with no conversion and an UNSUPPORTED result when the market is not verified.">
+<link rel="canonical" href="https://marketcart-ci.pages.dev/guides/shopify-markets-currency-mismatch-cart-total-test/">
+<meta name="robots" content="index,follow">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Shopify Markets currency mismatch in the cart: test stored vs visible currency and totals","description":"Stored vs visible cart currency and totals under Shopify Markets, with no conversion and an UNSUPPORTED result when the market is not verified.","url":"https://marketcart-ci.pages.dev/guides/shopify-markets-currency-mismatch-cart-total-test/","datePublished":"2026-11-07","dateModified":"2026-11-07","about":["Shopify themes","Playwright","continuous integration"]}</script>
+<style>
+:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#5c5c57;--line:#e3e2dc;--card:#fff;--accent:#1f5fbf;--code:#f1f0ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 64px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:32px}
+a{color:var(--accent)}code,pre{background:var(--code);border-radius:6px;font:13px/1.5 ui-monospace,Consolas,monospace}code{padding:1px 5px}pre{padding:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}.tw{overflow-x:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0}.muted{color:var(--muted)}
+</style>
+</head>
+<body><main>
+<p class="muted"><a href="/">MarketCart CI</a> › Guides</p>
+<h1>Shopify Markets currency mismatch in the cart: test stored vs visible currency and totals</h1>
+<p>With Shopify Markets a shopper can be served a different currency than your default. Three things must agree in the same browser session: the market the session actually got, the currency of the stored cart, and the currency shown next to every visible price and the total. When one of them drifts (a hard-coded symbol in a snippet, an app that formats prices itself, a cached drawer from another market) the shopper sees one number and pays another.</p>
+<h2>Where each value comes from</h2>
+<ul>
+<li><strong>Stored cart:</strong> <code>GET /{locale}/cart.js</code>. Shopify's reference says all monetary properties are returned in the customer's <em>presentment currency</em>, and the <code>currency</code> field tells you which. Ajax amounts are integers in hundredths (<code>2400</code> = 24.00).</li>
+<li><strong>Session market:</strong> in Liquid, <code>localization.country</code> and <code>localization.country.currency.iso_code</code>; in the browser, storefronts expose <code>window.Shopify.country</code> and <code>window.Shopify.currency.active</code> (a de-facto global, not a documented contract, so read it defensively).</li>
+<li><strong>Visible prices:</strong> the rendered drawer or cart page text, e.g. <code>€24.00</code>, <code>24,00 €</code>, <code>$24.00</code>.</li></ul>
+<h2>The rules a test should apply</h2>
+<ol><li>Verify the market first. If you asked for IE/EUR and the session reports US/USD, the test is <strong>inconclusive</strong>, not a pass and not a regression: you did not test the market you meant to.</li>
+<li>The stored cart currency must equal the session currency.</li>
+<li>Every visible price must carry an indicator of that currency and the same amount as the stored line. A price with no currency indicator is unverifiable, not correct.</li>
+<li>Never convert. If amounts only match after applying an exchange rate, they do not match.</li></ol>
+<h2>Examples (synthetic fixture, planted bugs)</h2>
+<div class="tw"><table><thead><tr><th>Scenario</th><th>Stored</th><th>Visible</th><th>Result</th></tr></thead><tbody>
+<tr><td><a href="https://marketcart-fixture.pages.dev/s/healthy/products/linen-shirt?variant=4101&amp;country=DE">healthy, DE market</a></td><td>EUR 2400</td><td>24,00 €</td><td>PASS</td></tr>
+<tr><td><a href="https://marketcart-fixture.pages.dev/s/cart-currency-usd/products/linen-shirt?variant=4101&amp;country=IE">stored currency wrong</a></td><td>USD 2600</td><td>€ prices</td><td>REGRESSION — “stored cart currency USD, verified market currency EUR”</td></tr>
+<tr><td><a href="https://marketcart-fixture.pages.dev/s/visible-wrong-symbol/products/linen-shirt?variant=4101&amp;country=IE">wrong symbol in drawer</a></td><td>EUR 2400</td><td>$24.00</td><td>REGRESSION — visible price indicates USD in an EUR market</td></tr>
+<tr><td><a href="https://marketcart-fixture.pages.dev/s/visible-wrong-amount/products/linen-shirt?variant=4101&amp;country=IE">wrong amount</a></td><td>EUR 2400</td><td>€20.00</td><td>REGRESSION — visible 2000 vs stored 2400</td></tr>
+<tr><td>requested JP/JPY, store serves IE/EUR</td><td>—</td><td>—</td><td>UNSUPPORTED — market not verified in-session</td></tr>
+</tbody></table></div>
+<h2>Minimal in-page check</h2>
+<pre><code>// paste in DevTools on your own store after adding an item
+const cart = await (await fetch(Shopify.routes.root + 'cart.js')).json();
+const session = Shopify.currency?.active;
+console.log({ storedCurrency: cart.currency, sessionCurrency: session,
+  same: cart.currency === session,
+  total: (cart.total_price / 100).toFixed(2) });</code></pre>
+<p>Then compare with the rendered total. For CI across markets, give each case its market (<code>{"country":"DE","currency":"EUR"}</code>) and the market URL a shopper would use; MarketCart reports UNSUPPORTED when the session never gets that market.</p>
+<h2>Limits</h2>
+<p>Zero-decimal currencies (JPY, KRW) rely on Shopify's “×100 for every currency” Ajax convention, verified on synthetic data only. Indian lakh digit grouping is not parsed (returns UNSUPPORTED). Create a CI workflow with the <a href="/tools/github-action-generator/">workflow generator</a>.</p>
+<div class="card"><strong>Try it:</strong> run the <a href="/#demo">free demo</a> (synthetic store, no account), check <a href="/#free-check">one case on your own store for free</a>, or use the <a href="https://github.com/paolomangiadev/marketcart-ci">open-source CLI and GitHub Action</a> locally. Hosted runs: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a> (30 days, no subscription).</div>
+<p class="muted">Related: <a href="/tools/github-action-generator/">workflow generator</a> · <a href="/guides/shopify-dawn-cart-drawer-not-updating/">Dawn drawer not updating</a> · <a href="/guides/shopify-horizon-playwright-test/">Horizon Playwright test</a> · <a href="/guides/shopify-cart-js-422-429-test/">cart.js 422 vs 429</a> · <a href="/guides/shopify-markets-currency-mismatch-cart-total-test/">Markets currency mismatch</a></p>
+<p class="muted">Updated 2026-11-08. Evidence: <a href="https://github.com/paolomangiadev/marketcart-ci/tree/main/evidence">repository evidence folder</a>.</p>
+</main>
+<script src="/config.js"></script>
+<script src="/app.js"></script>
+</body></html>

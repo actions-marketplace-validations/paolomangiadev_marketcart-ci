@@ -9,6 +9,9 @@
 - [Competitor matrix](https://marketcart-ci.pages.dev/#competitors)
 - [Guide: Shopify Dawn cart drawer not updating — CI test against /cart.js](https://marketcart-ci.pages.dev/guides/shopify-dawn-cart-drawer-not-updating/)
 - [Guide: Shopify Horizon theme Playwright cart test](https://marketcart-ci.pages.dev/guides/shopify-horizon-playwright-test/)
+- [Guide: Shopify cart.js 422 vs 429 — what to retry in a cart test](https://marketcart-ci.pages.dev/guides/shopify-cart-js-422-429-test/)
+- [Guide: Shopify Markets currency mismatch in the cart](https://marketcart-ci.pages.dev/guides/shopify-markets-currency-mismatch-cart-total-test/)
+- [Tool: GitHub Actions workflow generator](https://marketcart-ci.pages.dev/tools/github-action-generator/)
 
 ## Product
 - [Buy 100 hosted cases (EUR 19)](https://payhip.com/b/er1iY)

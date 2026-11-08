@@ -89,6 +89,8 @@ web/               static checker page
 
 ## Hosted checks and pricing
 
+Workflow generator (copy-paste GitHub Actions YAML): https://marketcart-ci.pages.dev/tools/github-action-generator/ · Guides: https://marketcart-ci.pages.dev/guides/shopify-dawn-cart-drawer-not-updating/ · https://marketcart-ci.pages.dev/guides/shopify-cart-js-422-429-test/ · https://marketcart-ci.pages.dev/guides/shopify-markets-currency-mismatch-cart-total-test/
+
 Checker, live demo and one free case per store: https://marketcart-ci.pages.dev · machine-readable docs: https://marketcart-ci.pages.dev/llms.txt
 
 **EUR 19 = 100 completed hosted cases**, valid 30 days from activation (https://payhip.com/b/er1iY). Only `PASS`/`REGRESSION` use credits. A live/candidate pair uses 2. No subscription. The license key is delivered automatically by Payhip and verified on every job; refunds disable it. The hosted service runs the same engine in Cloudflare Browser Run with a D1 credit ledger (`service/`).

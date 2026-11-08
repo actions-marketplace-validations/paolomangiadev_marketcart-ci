@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GitHub Actions workflow generator for Shopify cart checks</title>
+<meta name="description" content="Generate a GitHub Actions workflow that checks a Shopify cart against /cart.js, pinned to MarketCart CI v0.2.0.">
+<link rel="canonical" href="https://marketcart-ci.pages.dev/tools/github-action-generator/">
+<meta name="robots" content="index,follow">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","headline":"GitHub Actions workflow generator for Shopify cart checks","description":"Generate a GitHub Actions workflow that checks a Shopify cart against /cart.js, pinned to MarketCart CI v0.2.0.","url":"https://marketcart-ci.pages.dev/tools/github-action-generator/","datePublished":"2026-11-07","dateModified":"2026-11-07","about":["Shopify themes","Playwright","continuous integration"]}</script>
+<style>
+:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#5c5c57;--line:#e3e2dc;--card:#fff;--accent:#1f5fbf;--code:#f1f0ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 64px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:32px}
+a{color:var(--accent)}code,pre{background:var(--code);border-radius:6px;font:13px/1.5 ui-monospace,Consolas,monospace}code{padding:1px 5px}pre{padding:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}.tw{overflow-x:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0}.muted{color:var(--muted)}
+</style>
+</head>
+<body><main>
+<p class="muted"><a href="/">MarketCart CI</a> › Guides</p>
+<h1>GitHub Actions workflow generator for Shopify cart checks</h1>
+<p>Pick a mode and get a complete workflow for <code>.github/workflows/marketcart.yml</code>, pinned to the released Action <code>paolomangiadev/marketcart-ci@v0.2.0</code> with read-only permissions. Nothing you type leaves this page; the workflow only <em>references</em> GitHub secrets, it never contains a license key or password.</p>
+<div class="card" id="gen">
+  <p><strong>1. Mode</strong></p>
+  <p><label><input type="radio" name="mode" value="demo" checked> Demo — seeded synthetic store with planted cart bugs, no account, no secrets (start here)</label><br>
+  <label><input type="radio" name="mode" value="remote"> Hosted — your own Shopify store (Dawn family or Horizon 4.4), needs a license secret</label></p>
+  <p><strong>2. Trigger</strong> <select id="g-trigger"><option value="pr">Pull requests + manual run</option><option value="push">Push to main + manual run</option><option value="nightly">Nightly + manual run</option></select></p>
+  <div id="g-remote" hidden>
+    <p><label>Cases file in your repo <input id="g-cases" value="marketcart/cases.json" size="32"></label></p>
+    <p><label>API URL <input id="g-api" value="https://marketcart-ci.pages.dev" size="36"></label></p>
+    <p><label><input type="checkbox" id="g-pw"> My store is password-protected (development store)</label></p>
+    <p><label>Store host for the cases template <input id="g-host" placeholder="your-store.myshopify.com" size="32"></label></p>
+  </div>
+  <p><strong>3. Your workflow</strong> <button type="button" id="g-copy">Copy</button> <a id="g-dl" download="marketcart.yml" href="#">Download marketcart.yml</a> <span id="g-msg" class="muted"></span></p>
+  <textarea id="g-out" rows="26" style="width:100%;font:13px/1.45 ui-monospace,Consolas,monospace" readonly spellcheck="false"></textarea>
+  <div id="g-cases-wrap" hidden><p><strong>4. Cases file</strong> (<code id="g-cases-name">marketcart/cases.json</code>) <a id="g-dl2" download="cases.json" href="#">Download cases.json</a></p>
+  <textarea id="g-cases-out" rows="16" style="width:100%;font:13px/1.45 ui-monospace,Consolas,monospace" readonly spellcheck="false"></textarea></div>
+</div>
+<h2>Setup for hosted mode</h2>
+<ol><li>Add the store's verification tag: get it from the <a href="/#free-check">checker</a> (free) or <code>GET /v1/domain-token?host=&lt;your-store&gt;</code> with your license, and paste it into <code>layout/theme.liquid</code> inside <code>&lt;head&gt;</code>.</li>
+<li>Repository › Settings › Secrets and variables › Actions › New repository secret: <code>MARKETCART_LICENSE</code> (your key) and, for password-protected development stores only, <code>MARKETCART_STOREFRONT_PASSWORD</code>.</li>
+<li>Commit the workflow and the cases file. Use real product URLs and numeric variant IDs; <code>"checks": {"total": true}</code> makes a missing total inconclusive instead of silently skipped.</li></ol>
+<h2>What the exit codes mean</h2>
+<p><code>0</code> every case PASS · <code>1</code> at least one REGRESSION (stored cart and visible cart disagree) · <code>2</code> only inconclusive results (UNSUPPORTED theme or market, BLOCKED by rate limiting or a password wall, ERROR) · <code>3</code> license or API error. Hosted runs bill only PASS and REGRESSION.</p>
+<h2>Theme and surface support</h2>
+<p>Dawn family and Horizon 4.4. A theme with a cart drawer is tested on the drawer; otherwise on <code>/cart</code>. Live-verified so far: Dawn 16.1.1 on the cart page; Dawn drawer and Horizon are verified on version-pinned synthetic markup only. Other themes return UNSUPPORTED.</p>
+<script src="/tools/workflow.js"></script>
+<script>
+(function () {
+  var W = window.MarketCartWorkflow;
+  function $(id) { return document.getElementById(id); }
+  function opts() { return { mode: document.querySelector('input[name=mode]:checked').value, trigger: $('g-trigger').value, casesPath: $('g-cases').value, apiUrl: $('g-api').value, password: $('g-pw').checked, host: $('g-host').value }; }
+  function url(text) { return 'data:text/yaml;charset=utf-8,' + encodeURIComponent(text); }
+  function render() {
+    var o = opts(); $('g-remote').hidden = o.mode !== 'remote'; $('g-cases-wrap').hidden = o.mode !== 'remote';
+    try { var y = W.build(o); $('g-out').value = y; $('g-dl').href = url(y); $('g-msg').textContent = ''; }
+    catch (e) { $('g-out').value = '# ' + e.message; $('g-msg').textContent = e.message; }
+    if (o.mode === 'remote') { var c = W.casesTemplate(o); $('g-cases-out').value = c; $('g-dl2').href = 'data:application/json;charset=utf-8,' + encodeURIComponent(c); $('g-cases-name').textContent = o.casesPath || 'marketcart/cases.json'; }
+  }
+  document.querySelectorAll('#gen input, #gen select').forEach(function (el) { el.addEventListener('input', render); el.addEventListener('change', render); });
+  $('g-copy').addEventListener('click', function () {
+    var t = $('g-out');
+    t.focus(); t.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    $('g-msg').textContent = ok ? 'Copied' : 'Selected: press Ctrl/Cmd+C (or use Download)';
+    if (!ok && navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(function () { $('g-msg').textContent = 'Copied'; }, function () {});
+  });
+  render();
+})();
+</script>
+<div class="card"><strong>Try it:</strong> run the <a href="/#demo">free demo</a> (synthetic store, no account), check <a href="/#free-check">one case on your own store for free</a>, or use the <a href="https://github.com/paolomangiadev/marketcart-ci">open-source CLI and GitHub Action</a> locally. Hosted runs: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a> (30 days, no subscription).</div>
+<p class="muted">Related: <a href="/tools/github-action-generator/">workflow generator</a> · <a href="/guides/shopify-dawn-cart-drawer-not-updating/">Dawn drawer not updating</a> · <a href="/guides/shopify-horizon-playwright-test/">Horizon Playwright test</a> · <a href="/guides/shopify-cart-js-422-429-test/">cart.js 422 vs 429</a> · <a href="/guides/shopify-markets-currency-mismatch-cart-total-test/">Markets currency mismatch</a></p>
+<p class="muted">Updated 2026-11-08. Evidence: <a href="https://github.com/paolomangiadev/marketcart-ci/tree/main/evidence">repository evidence folder</a>.</p>
+</main>
+<script src="/config.js"></script>
+<script src="/app.js"></script>
+</body></html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopify cart.js 422 vs 429: what to retry in a cart test</title>
+<meta name="description" content="Shopify Ajax Cart API 422 Cart Error vs 429 throttling, with a runnable check and a pacing rule.">
+<link rel="canonical" href="https://marketcart-ci.pages.dev/guides/shopify-cart-js-422-429-test/">
+<meta name="robots" content="index,follow">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Shopify cart.js 422 vs 429: what to retry in a cart test","description":"Shopify Ajax Cart API 422 Cart Error vs 429 throttling, with a runnable check and a pacing rule.","url":"https://marketcart-ci.pages.dev/guides/shopify-cart-js-422-429-test/","datePublished":"2026-11-07","dateModified":"2026-11-07","about":["Shopify themes","Playwright","continuous integration"]}</script>
+<style>
+:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#5c5c57;--line:#e3e2dc;--card:#fff;--accent:#1f5fbf;--code:#f1f0ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--accent:#7fb0ff;--code:#24241f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 64px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:32px}
+a{color:var(--accent)}code,pre{background:var(--code);border-radius:6px;font:13px/1.5 ui-monospace,Consolas,monospace}code{padding:1px 5px}pre{padding:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}.tw{overflow-x:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0}.muted{color:var(--muted)}
+</style>
+</head>
+<body><main>
+<p class="muted"><a href="/">MarketCart CI</a> › Guides</p>
+<h1>Shopify cart.js returning 422 or 429: test it without retrying the wrong thing</h1>
+<p>Two very different failures come back from the Shopify Ajax Cart API. <strong>422</strong> means Shopify understood the request and refused it; <strong>429</strong> means you are being throttled. A cart test that treats them the same either retries a request that can never succeed, or turns throttling into a red build.</p>
+<h2>422: the cart rejected the operation</h2>
+<p>From the official Ajax Cart API reference, <code>POST /{locale}/cart/add.js</code> answers <code>422</code> with a JSON body such as:</p>
+<pre><code>{ "status": 422, "message": "Cart Error", "description": "Cannot find variant" }</code></pre>
+<p>Documented cases: the variant does not exist or is not available in the online store channel (<em>Cannot find variant</em>); the product is sold out (<em>The product '…' is already sold out.</em>); the requested quantity exceeds stock (<em>You can't add more … to the cart.</em>). Note the last one: Shopify documents that it <strong>adds the maximum available quantity</strong> and still returns the error, so the stored cart can change even though the request "failed".</p>
+<p>Testing rule: a 422 is a semantic answer. Do not retry it blindly; record it, and treat the case as inconclusive for parity (the cart you asked for does not exist). The one documented exception is a variant you created or published seconds ago: Shopify says to retry after a short, increasing delay and to stop after a few attempts.</p>
+<h2>429: you are being throttled</h2>
+<p>The same reference warns that repeated failed attempts to add items to the same cart are throttled and return <code>429</code>. In our own paced tests on a password-protected development store, rapid cart cycles also hit 429 on the product page and on <code>/cart.js</code> after about four cycles in under a minute (our observation, not a published limit).</p>
+<p>Testing rule: wait, then try once more in a fresh session. Honour <code>Retry-After</code> when it is present (seconds or an HTTP date); otherwise back off exponentially with jitter and a ceiling. Never count a 429 as a pass, and never rotate IPs or proxies to get around it.</p>
+<h2>Minimal check you can run</h2>
+<pre><code>// node check-add.mjs https://your-store.myshopify.com 123   (Node 18+; run against a store you own)
+const [base, variant] = process.argv.slice(2);
+const r = await fetch(new URL('/cart/add.js', base), {
+  method: 'POST',
+  headers: { 'content-type': 'application/json', accept: 'application/json' },
+  body: JSON.stringify({ items: [{ id: Number(variant), quantity: 1 }] }),
+});
+const body = await r.json().catch(() =&gt; ({}));
+if (r.status === 422) console.log('REJECTED (do not retry):', body.description);
+else if (r.status === 429) console.log('THROTTLED, retry after', r.headers.get('retry-after') ?? 'backoff', 's');
+else if (r.ok) console.log('ADDED', body.items?.map((i) =&gt; [i.variant_id, i.quantity]));
+else console.log('HTTP', r.status);</code></pre>
+<p>A plain <code>fetch</code> has its own cookie jar, so this exercises the API, not a shopper's browser session. For the visible side (drawer, badge, totals) use a real browser.</p>
+<h2>How MarketCart CI classifies them</h2>
+<div class="tw"><table><thead><tr><th>Response</th><th>Result</th><th>Retried?</th><th>Billed (hosted)?</th></tr></thead><tbody>
+<tr><td>add-to-cart 4xx (e.g. 422)</td><td>UNSUPPORTED — “store rejected add-to-cart (HTTP 422); variant unavailable?”</td><td>No</td><td>No</td></tr>
+<tr><td>429 on product page, add, or /cart.js</td><td>BLOCKED — “storefront rate limited (HTTP 429)”</td><td>Once, in a fresh session, after Retry-After or backoff</td><td>No</td></tr>
+<tr><td>5xx / timeout</td><td>ERROR</td><td>Once</td><td>No</td></tr>
+</tbody></table></div>
+<p>Per store, the CLI and the hosted runner wait 15 s between cart cycles, honour Retry-After up to 300 s, otherwise back off 30 s × 2ⁿ with ±20% jitter (cap 300 s). Synthetic example from our fixture (<a href="https://marketcart-fixture.pages.dev/s/rate-limit-once/products/linen-shirt?variant=4101&amp;country=IE">rate-limit-once</a>, 429 with <code>Retry-After: 1</code> on the first request): result PASS after 2 attempts, <code>pacing.rateLimited: true</code>, waited ≥ 1 s. <a href="https://marketcart-fixture.pages.dev/s/rate-limit-always/products/linen-shirt?variant=4101&amp;country=IE">rate-limit-always</a>: BLOCKED after 2 attempts.</p>
+<h2>Limits</h2>
+<p>The 422 bodies above are Shopify's documented examples; wording can vary by store language. Throttling thresholds are not published; ours are observations on one development store. Generate a CI workflow with the <a href="/tools/github-action-generator/">workflow generator</a>.</p>
+<div class="card"><strong>Try it:</strong> run the <a href="/#demo">free demo</a> (synthetic store, no account), check <a href="/#free-check">one case on your own store for free</a>, or use the <a href="https://github.com/paolomangiadev/marketcart-ci">open-source CLI and GitHub Action</a> locally. Hosted runs: <a href="https://payhip.com/b/er1iY">EUR 19 for 100 completed cases</a> (30 days, no subscription).</div>
+<p class="muted">Related: <a href="/tools/github-action-generator/">workflow generator</a> · <a href="/guides/shopify-dawn-cart-drawer-not-updating/">Dawn drawer not updating</a> · <a href="/guides/shopify-horizon-playwright-test/">Horizon Playwright test</a> · <a href="/guides/shopify-cart-js-422-429-test/">cart.js 422 vs 429</a> · <a href="/guides/shopify-markets-currency-mismatch-cart-total-test/">Markets currency mismatch</a></p>
+<p class="muted">Updated 2026-11-08. Evidence: <a href="https://github.com/paolomangiadev/marketcart-ci/tree/main/evidence">repository evidence folder</a>.</p>
+</main>
+<script src="/config.js"></script>
+<script src="/app.js"></script>
+</body></html>
