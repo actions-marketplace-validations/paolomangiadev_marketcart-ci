@@ -32,3 +32,28 @@ jobs:
       - uses: paolomangiadev/marketcart-ci@v0
         with:
           mode: demo
+  package:
+    # the installable CLI: committed bundles match the sources, the packed tarball installs and runs in a clean
+    # directory with an empty npm cache, and npx from this commit's Git source prints help without a browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - name: Bundles match the sources
+        run: node scripts/build-package.ts && git diff --exit-code -- bin engine
+      - name: Packed tarball in a clean directory
+        run: |
+          npm pack --pack-destination "$RUNNER_TEMP"
+          mkdir "$RUNNER_TEMP/clean" && cd "$RUNNER_TEMP/clean"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund --cache "$RUNNER_TEMP/npm-cache" "$RUNNER_TEMP"/marketcart-ci-*.tgz
+          npx --no-install marketcart-ci --help
+          npx --no-install marketcart-ci setup-browser --with-deps
+          npx --no-install marketcart-ci demo
+      - name: npx from this commit's Git source
+        run: |
+          cd "$RUNNER_TEMP"
+          npx --yes --cache "$RUNNER_TEMP/npx-cache" github:${{ github.repository }}#${{ github.sha }} --help

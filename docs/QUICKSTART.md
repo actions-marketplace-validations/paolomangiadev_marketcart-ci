@@ -12,7 +12,7 @@ Expected: C01 `PASS`, C05 `REGRESSION` (stored item, stale drawer), C16 `REGRESS
 
 ## 2. Your own store (hosted)
 
-1. Get a license key: EUR 19 for 100 hosted cases, valid 30 days from first use (https://payhip.com/b/er1iY). One free case per store is available on https://marketcart-ci.pages.dev while the free budget lasts.
+1. Get a license key: EUR 19 for 100 hosted cases, valid 30 days from first use (https://payhip.com/b/er1iY). One free case per store is available on https://marketcart-ci.pages.dev/?src=github-docs while the free budget lasts.
 2. `MARKETCART_LICENSE=<key> node integrations/cli/marketcart.ts token your-store.com`
    and paste the printed `<meta name="marketcart-verification" …>` tag into the `<head>` of `layout/theme.liquid`.
 3. Copy `docs/cases.example.json`, put your product URLs and numeric variant IDs in it. Use the market URL the shopper would use (for example `/en-ie/`); the check verifies country and currency inside the session and refuses to guess.

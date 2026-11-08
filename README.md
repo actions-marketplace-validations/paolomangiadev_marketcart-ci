@@ -13,6 +13,17 @@ It exists for one class of bug: the store looks fine and the request succeeded, 
 
 ## 60-second quickstart (no key, no account)
 
+With npx (Node.js 22.18+ and Git). npx still downloads and runs the package from GitHub, it just skips the manual clone; nothing is installed globally and nothing runs at install time:
+
+```bash
+npx github:paolomangiadev/marketcart-ci#v0.2.1 setup-browser   # once: headless Chromium for local runs (~100 MB)
+npx github:paolomangiadev/marketcart-ci#v0.2.1 demo            # 3 seeded cases on a local synthetic store
+```
+
+Without arguments it prints help and does nothing billable. `setup-browser --with-deps` also installs the Linux system libraries (CI runners). `#v0.2.1` pins the command-line wrapper release; the check engine inside it is unchanged since v0.2.0. A downloadable tarball with its SHA-256 is attached to the [v0.2.1 release](https://github.com/paolomangiadev/marketcart-ci/releases/tag/v0.2.1) (`npm install ./marketcart-ci-0.2.1.tgz`).
+
+From a clone (Node.js 22.18+ runs the TypeScript sources directly):
+
 ```bash
 git clone https://github.com/paolomangiadev/marketcart-ci && cd marketcart-ci
 npm ci
@@ -20,8 +31,6 @@ npx playwright-core install chromium-headless-shell
 node integrations/cli/marketcart.ts demo     # 3 seeded cases on a local synthetic store
 node integrations/cli/marketcart.ts bench    # the full 20-case benchmark
 ```
-
-Requires Node.js 22.18 or newer (TypeScript runs natively, no build step).
 
 The demo store is a **synthetic fixture** (`fixtures/storefront/`): Dawn-style markup and Shopify-style Ajax endpoints with one known defect per scenario. A public copy runs at <https://marketcart-fixture.pages.dev/>. Passing the fixture proves the checks work on the fixture; it does not prove compatibility with a particular live store.
 
@@ -81,17 +90,19 @@ Hosted checks of your own store (`mode: remote`) send your cases to the hosted s
 
 ```
 engine/            assertions (pure), money parsing, safety policy, Dawn adapter, Playwright runner, CLI
+                   (+ cli.bundle.js / run.js: generated JavaScript build of the same sources for the package)
+bin/               generated package entry (bundle of integrations/cli/marketcart.ts)
 fixtures/storefront synthetic Dawn-like store with 15 scenarios (Node server + Workers entry)
 evidence/          the 20-case benchmark contract and a recorded run
-integrations/cli   public wrapper: demo, bench, remote, token
+integrations/cli   public wrapper: setup-browser, demo, bench, check, remote, token
+scripts/           build-package.ts (regenerates bin/ and engine/*.js), theme-matrix.ts
 web/               static checker page
 ```
 
 ## Hosted checks and pricing
 
-Workflow generator (copy-paste GitHub Actions YAML): https://marketcart-ci.pages.dev/tools/github-action-generator/ · Guides: https://marketcart-ci.pages.dev/guides/shopify-dawn-cart-drawer-not-updating/ · https://marketcart-ci.pages.dev/guides/shopify-cart-js-422-429-test/ · https://marketcart-ci.pages.dev/guides/shopify-markets-currency-mismatch-cart-total-test/
-
-Checker, live demo and one free case per store: https://marketcart-ci.pages.dev · machine-readable docs: https://marketcart-ci.pages.dev/llms.txt
+Workflow generator (copy-paste GitHub Actions YAML): https://marketcart-ci.pages.dev/tools/github-action-generator/?src=github-readme · Guides: https://marketcart-ci.pages.dev/guides/shopify-dawn-cart-drawer-not-updating/?src=github-readme · https://marketcart-ci.pages.dev/guides/shopify-cart-js-422-429-test/?src=github-readme · https://marketcart-ci.pages.dev/guides/shopify-markets-currency-mismatch-cart-total-test/?src=github-readme · https://marketcart-ci.pages.dev/guides/shopify-ajax-cart-drawer-web-components-playwright/?src=github-readme · https://marketcart-ci.pages.dev/guides/shopify-theme-check-vs-playwright-cart-e2e/?src=github-readme · https://marketcart-ci.pages.dev/guides/github-actions-shopify-preview-theme-e2e/?src=github-readme
+Checker, live demo and one free case per store: https://marketcart-ci.pages.dev/?src=github-readme · machine-readable docs: https://marketcart-ci.pages.dev/llms.txt?src=github-readme
 
 **EUR 19 = 100 completed hosted cases**, valid 30 days from activation (https://payhip.com/b/er1iY). Only `PASS`/`REGRESSION` use credits. A live/candidate pair uses 2. No subscription. The license key is delivered automatically by Payhip and verified on every job; refunds disable it. The hosted service runs the same engine in Cloudflare Browser Run with a D1 credit ledger (`service/`).
 

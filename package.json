@@ -1,18 +1,23 @@
 {
   "name": "marketcart-ci",
-  "version": "0.1.0",
-  "description": "Cart parity checks for Shopify Dawn-family themes: stored cart vs what the shopper sees.",
+  "version": "0.2.1",
+  "description": "Cart parity checks for Shopify Dawn-family and Horizon 4.4 themes: stored cart (/cart.js) vs what the shopper sees in the drawer or cart page.",
   "license": "MIT",
   "type": "module",
-  "private": true,
   "engines": { "node": ">=22.18" },
-  "bin": { "marketcart": "integrations/cli/marketcart.ts" },
+  "bin": { "marketcart-ci": "bin/marketcart.js", "marketcart": "bin/marketcart.js" },
+  "files": ["bin/marketcart.js", "engine/", "evidence/benchmark-manifest.json"],
+  "repository": { "type": "git", "url": "git+https://github.com/paolomangiadev/marketcart-ci.git" },
+  "bugs": { "url": "https://github.com/paolomangiadev/marketcart-ci/issues" },
+  "homepage": "https://marketcart-ci.pages.dev/?src=npm",
+  "keywords": ["shopify", "playwright", "cart", "e2e", "github-actions", "dawn", "horizon", "ci"],
   "scripts": {
     "demo": "node integrations/cli/marketcart.ts demo",
     "bench": "node engine/cli.ts bench",
     "test": "node --test tests/*.test.ts",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "build:package": "node scripts/build-package.ts"
   },
   "dependencies": { "playwright-core": "1.64.1" },
-  "devDependencies": { "@types/node": "^24.0.0", "typescript": "^5.9.0" }
+  "devDependencies": { "@types/node": "^24.0.0", "esbuild": "0.28.2", "typescript": "^5.9.0" }
 }

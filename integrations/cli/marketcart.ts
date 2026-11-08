@@ -1,23 +1,54 @@
 #!/usr/bin/env node
 // MarketCart CI public command line wrapper.
+//   marketcart                         help and quickstart (no network, no browser)
+//   marketcart setup-browser           installs the headless Chromium build matching the bundled playwright-core
 //   marketcart demo                    seeded synthetic-fixture demo, runs locally, no key, no network beyond 127.0.0.1
 //   marketcart bench                   full 20-case synthetic benchmark (same as the published evidence)
+//   marketcart check CASES.json        local check of YOUR store with your own browser (free, no key)
 //   marketcart remote CASES.json       hosted check of YOUR authorized store (needs MARKETCART_LICENSE)
 //   marketcart token HOST              prints the meta tag that proves you control HOST
 // Exit status: 0 all PASS · 1 at least one REGRESSION · 2 inconclusive only (BLOCKED/UNSUPPORTED/ERROR)
 //              3 API / license / credit error · 64 usage error
+// Run from the repository (node integrations/cli/marketcart.ts) it uses engine/cli.ts directly. Installed as a package
+// (npx / npm), Node cannot strip TypeScript types inside node_modules, so it runs engine/cli.bundle.js: the same
+// frozen engine source bundled to JavaScript by scripts/build-package.ts (no engine code changes).
 // Environment: MARKETCART_API_URL (hosted API base URL; default https://marketcart-ci.pages.dev),
 //              MARKETCART_LICENSE (Payhip license key; store it as a CI secret, never in the repo),
 //              MARKETCART_STOREFRONT_PASSWORD (only for password-protected stores; CI secret, sent once over HTTPS),
 //              MARKETCART_JOB_ID (idempotency key; default derived from the CI run), MARKETCART_SOURCE (attribution tag).
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ENGINE_CLI = join(HERE, '..', '..', 'engine', 'cli.ts');
+// Package root: bin/marketcart.js -> .. ; integrations/cli/marketcart.ts -> ../..
+const ROOT = existsSync(join(HERE, '..', 'package.json')) ? join(HERE, '..') : join(HERE, '..', '..');
+const FROM_SOURCE = import.meta.url.endsWith('.ts');
+// The launcher makes the bundled engine see itself as engine/cli.ts, exactly as `node engine/cli.ts <cmd>` would.
+const ENGINE_CLI = FROM_SOURCE ? join(ROOT, 'engine', 'cli.ts') : join(ROOT, 'engine', 'run.js');
+const VERSION = (JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as { version: string }).version;
+
+const HELP = `marketcart-ci ${VERSION} (command-line wrapper) · engine frozen at release v0.2.0
+Checks that a Shopify cart drawer or cart page shows what /cart.js stored (Dawn family, Horizon 4.4).
+
+Quickstart (no account, synthetic store with planted bugs; downloads a headless Chromium once, ~100 MB):
+  npx github:paolomangiadev/marketcart-ci setup-browser
+  npx github:paolomangiadev/marketcart-ci demo
+
+Commands:
+  setup-browser [--with-deps]  install the headless Chromium matching this package (Linux CI: --with-deps)
+  demo                         3 seeded cases on a local synthetic store; exit 0 when they behave as expected
+  bench                        the full 20-case synthetic benchmark
+  check CASES.json             check YOUR store locally with your own browser (free, no key)
+  remote CASES.json            hosted check of YOUR store (MARKETCART_LICENSE; no local browser)
+  token HOST                   meta tag proving you control HOST (MARKETCART_LICENSE)
+  --version | --help
+
+Exit status: 0 all PASS · 1 REGRESSION · 2 inconclusive only · 3 API/license error · 64 usage error
+Workflow generator: https://marketcart-ci.pages.dev/tools/github-action-generator/?src=cli-help`;
 
 const DEFAULT_API = 'https://marketcart-ci.pages.dev';
 function apiBase(): string | null {
@@ -74,17 +105,29 @@ async function token(host: string): Promise<number> {
   return 0;
 }
 
-function local(cmd: 'demo' | 'bench'): number {
-  const r = spawnSync(process.execPath, [ENGINE_CLI, cmd], { stdio: 'inherit' });
+function local(args: string[]): number {
+  const r = spawnSync(process.execPath, [ENGINE_CLI, ...args], { stdio: 'inherit' });
+  return r.status ?? 70;
+}
+
+// Explicit, user-invoked browser download (never a postinstall step): playwright-core's own installer, same version.
+function setupBrowser(withDeps: boolean): number {
+  const req = createRequire(join(ROOT, 'package.json'));
+  const cli = join(dirname(req.resolve('playwright-core/package.json')), 'cli.js');
+  const r = spawnSync(process.execPath, [cli, 'install', ...(withDeps ? ['--with-deps'] : []), 'chromium-headless-shell'], { stdio: 'inherit' });
   return r.status ?? 70;
 }
 
 const [cmd, arg] = process.argv.slice(2);
 const main = async (): Promise<number> => {
-  if (cmd === 'demo' || cmd === 'bench') return local(cmd);
+  if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') return (console.log(HELP), 0);
+  if (cmd === '--version' || cmd === '-v') return (console.log(VERSION), 0);
+  if (cmd === 'setup-browser') return setupBrowser(arg === '--with-deps');
+  if (cmd === 'demo' || cmd === 'bench') return local([cmd]);
+  if (cmd === 'check' && arg) return local(['check', arg]);
   if (cmd === 'remote' && arg) return remote(arg);
   if (cmd === 'token' && arg) return token(arg);
-  console.error('usage: marketcart demo | bench | remote CASES.json | token HOST');
+  console.error('usage: marketcart [setup-browser | demo | bench | check CASES.json | remote CASES.json | token HOST | --help]');
   return 64;
 };
 main().then((c) => process.exit(c), (e) => (console.error(e), process.exit(3)));
