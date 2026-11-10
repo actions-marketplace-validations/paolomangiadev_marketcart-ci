@@ -1,6 +1,6 @@
 # Competitor matrix (scoped, dated)
 
-Read 2026-11-07. "EXECUTED" means we ran the product on the same synthetic inputs; "DOCUMENTED" means only the vendor listing was read. Two executed synthetic cases do not support a broad superiority claim.
+Read 2026-11-07 (PromiseCheck price re-read 2026-11-10). "EXECUTED" means we ran the product on the same synthetic inputs; "DOCUMENTED" means only the vendor listing was read. Two executed synthetic cases do not support a broad superiority claim.
 
 | Product | What it checks | Result on our fixture | Price | Evidence |
 |---|---|---|---|---|

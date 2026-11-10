@@ -1,6 +1,6 @@
 # MarketCart CI — full reference
 
-Canonical: https://marketcart-ci.pages.dev/ · Repository: https://github.com/paolomangiadev/marketcart-ci · Purchase: https://payhip.com/b/er1iY · Updated 2026-11-07.
+Canonical: https://marketcart-ci.pages.dev/ · Repository: https://github.com/paolomangiadev/marketcart-ci · Purchase: https://payhip.com/buy?s=1&cart_links%5B%5D=er1iY&qty%5Ber1iY%5D=1 · Updated 2026-11-10.
 
 ## What it does
 MarketCart CI checks that a Shopify cart shows what Shopify stored. For each case it opens the product page in an isolated real-browser session, adds the requested variant and quantity with the theme's own add-to-cart form, reads the stored cart from Shopify's Ajax API (/cart.js) independently of the page, then reads the visible cart (drawer, or the cart page when the theme has no drawer). It compares requested vs stored (variant, quantity, unexpected lines), stored currency vs the market the session actually received (window.Shopify.country / currency.active), and stored vs visible (line count, variant options, quantity, line price amount and currency indicator, cart badge, total). No currency conversion is ever applied.
@@ -89,3 +89,6 @@ Check three things in the same browser session: the market Shopify actually serv
 
 ### How can I run cart regression tests in CI before publishing a Shopify theme?
 Run the open-source MarketCart CI CLI or GitHub Action on every theme change. Describe cases as JSON (product URL, variant, quantity, market), optionally as a pair: the published theme versus an unpublished theme preview. The job exits 0 on PASS, 1 on REGRESSION and 2 when a case is inconclusive, so a failing cart blocks the deploy. Local runs are free; hosted runs use prepaid case credits.
+
+### What do I need before running a check, and what does the free run cover?
+The free own-store run needs a verification meta tag in your theme head (it proves you control the store) and covers one product on a verified store while the daily free budget lasts. The sample demo runs on a synthetic store with planted bugs. Local CLI and Action demo runs are free on your own machine; hosted checks are a prepaid pack of 100 completed cases valid 30 days from activation. Supported markup: Dawn 15/16 and Horizon 4.4; live-verified so far on a Dawn 16.1.1 cart page, and preview themes are not live-verified.
