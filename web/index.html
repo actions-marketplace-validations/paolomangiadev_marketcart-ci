@@ -3,139 +3,280 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MarketCart CI — Shopify cart parity checks for CI</title>
-<meta name="description" content="Check that a Shopify Dawn or Horizon cart shows what Shopify stored: /cart.js vs the visible drawer, variant, quantity, prices and market currency. Open-source CLI and GitHub Action; hosted runs EUR 19 per 100 cases.">
+<title>MarketCart CI — Catch silent Shopify cart &amp; drawer bugs before customers do</title>
+<meta name="description" content="Real Chromium checks for Shopify Dawn and Horizon: compare /cart.js with the visible cart drawer, variant, quantity, prices and market currency in CI. Open-source CLI and GitHub Action; hosted runs EUR 19 per 100 checks.">
 <link rel="canonical" href="https://marketcart-ci.pages.dev/">
-<link rel="alternate" type="text/plain" href="https://marketcart-ci.pages.dev/llms.txt" title="llms.txt">
 <meta name="robots" content="index,follow">
-<script type="application/ld+json">[{"@context":"https://schema.org","@type":"SoftwareApplication","name":"MarketCart CI","applicationCategory":"DeveloperApplication","operatingSystem":"Any (Node.js 22+ for the CLI; hosted API over HTTPS)","url":"https://marketcart-ci.pages.dev/","description":"Cart parity checks for Shopify stores on Dawn-family and Horizon 4.4 themes: compares the stored cart (/cart.js) with the visible cart drawer or cart page, including variant, quantity, prices and in-session market currency. JSON result and exit code for CI.","softwareVersion":"0.1.0+0a4e5cee","offers":{"@type":"Offer","price":"19.00","priceCurrency":"EUR","url":"https://payhip.com/b/er1iY","description":"100 completed hosted cases, valid 30 days from activation","availability":"https://schema.org/InStock"},"sameAs":["https://github.com/paolomangiadev/marketcart-ci"]},{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Why does the Dawn cart drawer show an empty or stale cart while /cart.js already has the item?","acceptedAnswer":{"@type":"Answer","text":"Dawn's product form posts to /cart/add.js and asks Shopify to return the re-rendered cart drawer and cart icon sections in the same response; the drawer then swaps in that HTML. If a customization, an app script or a missing section breaks that swap, Shopify has stored the item (it is in /cart.js) but the shopper still sees the old drawer and badge. MarketCart CI reads /cart.js independently of the page and compares it with what the drawer shows; any difference is a REGRESSION with the exact mismatch."}},{"@type":"Question","name":"How do I catch a Shopify Markets currency mismatch in the cart?","acceptedAnswer":{"@type":"Answer","text":"Check three things in the same browser session: the market Shopify actually served (window.Shopify.country and window.Shopify.currency.active), the stored cart currency in /cart.js, and the currency shown next to every visible price and the total. They must agree, with no conversion applied. MarketCart CI does exactly that; if the session never gets the requested market, the result is UNSUPPORTED rather than a PASS you cannot trust."}},{"@type":"Question","name":"How can I run cart regression tests in CI before publishing a Shopify theme?","acceptedAnswer":{"@type":"Answer","text":"Run the open-source MarketCart CI CLI or GitHub Action on every theme change. Describe cases as JSON (product URL, variant, quantity, market), optionally as a pair: the published theme versus an unpublished theme preview. The job exits 0 on PASS, 1 on REGRESSION and 2 when a case is inconclusive, so a failing cart blocks the deploy. Local runs are free; hosted runs use prepaid case credits."}}]}]</script>
+<meta name="theme-color" content="#090D16">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23111827'/%3E%3Cpath d='M7 9h3l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h8.1a1.5 1.5 0 0 0 1.45-1.1L25 12H11.2' fill='none' stroke='%23F8FAFC' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='14' cy='24.2' r='1.7' fill='%233B82F6'/%3E%3Ccircle cx='22' cy='24.2' r='1.7' fill='%2310B981'/%3E%3C/svg%3E">
+<link rel="alternate" type="text/plain" href="https://marketcart-ci.pages.dev/llms.txt" title="llms.txt">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MarketCart CI">
+<meta property="og:title" content="MarketCart CI — Catch silent Shopify cart &amp; drawer bugs before customers do">
+<meta property="og:description" content="Real Chromium checks for Shopify Dawn and Horizon: compare /cart.js with the visible cart drawer, variant, quantity, prices and market currency in CI. Open-source CLI and GitHub Action; hosted runs EUR 19 per 100 checks.">
+<meta property="og:url" content="https://marketcart-ci.pages.dev/">
+<meta property="og:image" content="https://marketcart-ci.pages.dev/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MarketCart CI: a stale cart drawer next to a CI result that blocks the deploy">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MarketCart CI — Catch silent Shopify cart &amp; drawer bugs before customers do">
+<meta name="twitter:description" content="Real Chromium checks for Shopify Dawn and Horizon: compare /cart.js with the visible cart drawer, variant, quantity, prices and market currency in CI. Open-source CLI and GitHub Action; hosted runs EUR 19 per 100 checks.">
+<meta name="twitter:image" content="https://marketcart-ci.pages.dev/og-image.png">
+<script type="application/ld+json">[{"@context":"https://schema.org","@type":"SoftwareApplication","name":"MarketCart CI","applicationCategory":"DeveloperApplication","operatingSystem":"Any (Node.js 22+ for the CLI; hosted API over HTTPS)","url":"https://marketcart-ci.pages.dev/","description":"Cart parity checks for Shopify stores on Dawn-family and Horizon 4.4 themes: compares the stored cart (/cart.js) with the visible cart drawer or cart page, including variant, quantity, prices and in-session market currency. JSON result and exit code for CI.","softwareVersion":"0.1.0+0a4e5cee","offers":{"@type":"Offer","price":"19.00","priceCurrency":"EUR","url":"https://payhip.com/buy?s=1&cart_links%5B%5D=er1iY&qty%5Ber1iY%5D=1","description":"100 completed hosted cases, valid 30 days from activation","availability":"https://schema.org/InStock"},"sameAs":["https://github.com/paolomangiadev/marketcart-ci"]},{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Why does the Dawn cart drawer show an empty or stale cart while /cart.js already has the item?","acceptedAnswer":{"@type":"Answer","text":"Dawn's product form posts to /cart/add.js and asks Shopify to return the re-rendered cart drawer and cart icon sections in the same response; the drawer then swaps in that HTML. If a customization, an app script or a missing section breaks that swap, Shopify has stored the item (it is in /cart.js) but the shopper still sees the old drawer and badge. MarketCart CI reads /cart.js independently of the page and compares it with what the drawer shows; any difference is a REGRESSION with the exact mismatch."}},{"@type":"Question","name":"How do I catch a Shopify Markets currency mismatch in the cart?","acceptedAnswer":{"@type":"Answer","text":"Check three things in the same browser session: the market Shopify actually served (window.Shopify.country and window.Shopify.currency.active), the stored cart currency in /cart.js, and the currency shown next to every visible price and the total. They must agree, with no conversion applied. MarketCart CI does exactly that; if the session never gets the requested market, the result is UNSUPPORTED rather than a PASS you cannot trust."}},{"@type":"Question","name":"How can I run cart regression tests in CI before publishing a Shopify theme?","acceptedAnswer":{"@type":"Answer","text":"Run the open-source MarketCart CI CLI or GitHub Action on every theme change. Describe cases as JSON (product URL, variant, quantity, market), optionally as a pair: the published theme versus an unpublished theme preview. The job exits 0 on PASS, 1 on REGRESSION and 2 when a case is inconclusive, so a failing cart blocks the deploy. Local runs are free; hosted runs use prepaid case credits."}},{"@type":"Question","name":"What do I need before running a check, and what does the free run cover?","acceptedAnswer":{"@type":"Answer","text":"The free own-store run needs a verification meta tag in your theme head (it proves you control the store) and covers one product on a verified store while the daily free budget lasts. The sample demo runs on a synthetic store with planted bugs. Local CLI and Action demo runs are free on your own machine; hosted checks are a prepaid pack of 100 completed cases valid 30 days from activation. Supported markup: Dawn 15/16 and Horizon 4.4; live-verified so far on a Dawn 16.1.1 cart page, and preview themes are not live-verified."}}]}]</script>
 <style>
-:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#5c5c57;--line:#e3e2dc;--card:#fff;--pass:#1f7a3f;--fail:#b3261e;--warn:#8a5a00;--accent:#1f5fbf;--code:#f1f0ea}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--pass:#5cc67e;--fail:#ff8a80;--warn:#e0b050;--accent:#7fb0ff;--code:#24241f}}
-:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--muted:#a3a29b;--line:#2e2e2b;--card:#1c1c1a;--pass:#5cc67e;--fail:#ff8a80;--warn:#e0b050;--accent:#7fb0ff;--code:#24241f}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-main{max-width:980px;margin:0 auto;padding:32px 16px 64px}h1{font-size:30px;margin:0 0 8px}h2{font-size:21px;margin:40px 0 10px}h3{font-size:17px;margin:18px 0 6px}
-p{margin:8px 0}.muted{color:var(--muted)}a{color:var(--accent)}code,pre{background:var(--code);border-radius:6px;font:13px/1.5 ui-monospace,Consolas,monospace}
-code{padding:1px 5px}pre{padding:12px;overflow-x:auto}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
-table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-.tw{overflow-x:auto}.PASS{color:var(--pass);font-weight:600}.REGRESSION{color:var(--fail);font-weight:600}.BLOCKED,.UNSUPPORTED,.ERROR{color:var(--warn);font-weight:600}
-.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:13px;margin:2px 4px 2px 0}
-button,.btn{display:inline-block;border:0;border-radius:8px;padding:10px 16px;background:var(--accent);color:#fff;font-weight:600;text-decoration:none;cursor:pointer;font-size:15px}
-button[disabled]{opacity:.5;cursor:not-allowed}ul{padding-left:20px}label{display:block;margin:8px 0 2px;font-weight:600;font-size:14px}
-input,select{width:100%;max-width:520px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+:root{--bg:#090D16;--card:#111827;--surface:#1E293B;--line:#1F2937;--fg:#F8FAFC;--body:#94A3B8;--accent:#3B82F6;--accent-fill:#2563EB;--green:#10B981;--red:#F87171;--amber:#FBBF24;--link:#60A5FA;--code:#0B1220;--sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--body);font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--link)}a:hover{color:#93C5FD}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+h1,h2,h3{color:var(--fg);letter-spacing:-.025em;line-height:1.2;margin:0}
+h1{font-size:clamp(30px,5.4vw,48px);font-weight:700}h2{font-size:clamp(24px,3.4vw,32px);font-weight:700}h3{font-size:18px;font-weight:600}
+p{margin:0 0 12px;max-width:65ch}.muted{color:var(--body)}.small{font-size:14px}
+code,pre{font-family:var(--mono)}code{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:.88em;color:#E2E8F0}
+pre{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.55;color:#E2E8F0;margin:12px 0}pre code{background:none;border:0;padding:0}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.site-header{position:sticky;top:0;z-index:20;background:rgba(9,13,22,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.site-header .wrap{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font-weight:700;letter-spacing:-.025em;font-size:18px;min-height:44px}
+.brand:hover{color:var(--fg)}
+.nav{display:flex;align-items:center;flex-wrap:wrap;gap:0 4px}
+.nav a{color:var(--body);text-decoration:none;font-size:15px;padding:0 10px;min-height:44px;display:inline-flex;align-items:center;border-radius:8px}
+.nav a:hover,.nav a[aria-current="page"]{color:var(--fg);background:var(--surface)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:10px;border:1px solid transparent;background:var(--accent-fill);color:#fff;font:600 15px/1 var(--sans);text-decoration:none;cursor:pointer;transition:background .15s,box-shadow .15s,transform .15s}
+.btn:hover{background:#1D4ED8;color:#fff;box-shadow:0 0 0 4px rgba(59,130,246,.18)}
+.btn.secondary{background:var(--surface);border-color:#334155;color:var(--fg)}.btn.secondary:hover{background:#273449;color:var(--fg)}
+.btn.ghost{background:transparent;border-color:#334155;color:var(--fg)}
+.btn[disabled]{opacity:.55;cursor:not-allowed;box-shadow:none}
+.nav a.btn{padding:0 14px;margin-left:6px;font-size:14px;color:#fff;background:var(--accent-fill)}.nav a.btn:hover{background:#1D4ED8;color:#fff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 1px 2px rgba(0,0,0,.35);margin:16px 0}
+.card.glow{border-color:rgba(59,130,246,.55);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1px rgba(59,130,246,.18),0 10px 40px -12px rgba(59,130,246,.35)}
+.card.glow-green{border-color:rgba(16,185,129,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 10px 40px -14px rgba(16,185,129,.35)}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #334155;border-radius:999px;padding:3px 12px;font-size:13px;color:var(--body);background:var(--surface)}
+.pill.badge{font-family:var(--mono);font-size:12px;color:#BFDBFE;border-color:rgba(59,130,246,.5);background:rgba(59,130,246,.1)}
+.PASS{color:var(--green);font-weight:600}.REGRESSION{color:var(--red);font-weight:600}.BLOCKED,.UNSUPPORTED,.ERROR{color:var(--amber);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--fg);font-weight:600}.tw{overflow-x:auto}
+.section{padding:56px 0 8px}.section>.wrap>h2{margin-bottom:10px}.lead{font-size:18px;max-width:62ch}
+.hero{padding:48px 0 24px}.hero-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center}
+.hero h1 span{color:var(--accent)}.cta-row{display:flex;flex-wrap:wrap;gap:12px;margin:22px 0 10px}
+.cta-note{font-size:14px}
+.visual{display:grid;gap:12px}.mini-store,.ci-card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.ci-card{padding:14px 16px;font-family:var(--mono);font-size:13px;line-height:1.5}
+.ci-row{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)}.ci-row:last-of-type{border-bottom:0}
+.ci-tag{flex:none;min-width:92px;font-weight:700}.ci-note{color:var(--body)}
+.deploy{display:inline-block;margin-top:8px;padding:4px 10px;border-radius:8px;border:1px solid rgba(248,113,113,.5);color:#FCA5A5;background:rgba(248,113,113,.08);font-weight:700}
+.vlabel{font-size:12px;color:var(--body);display:flex;justify-content:space-between;gap:8px;font-family:var(--sans)}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.tab{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid #334155;background:var(--surface);color:var(--fg);font:600 15px/1 var(--sans);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent-fill);border-color:var(--accent);box-shadow:0 0 0 4px rgba(59,130,246,.18)}
+.tab:hover{border-color:var(--accent)}
+.panel[hidden]{display:none}
+.steps3{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:12px 0}.stepbox,.card,.grid3>*,.grid2>*{min-width:0}pre{max-width:100%}
+.stepbox{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px}.stepbox h3{font-size:16px;margin-bottom:6px}
+label{display:block;margin:10px 0 4px;font-weight:600;font-size:14px;color:var(--fg)}
+input,select{width:100%;max-width:560px;min-height:44px;padding:8px 12px;border:1px solid #334155;border-radius:10px;background:var(--code);color:var(--fg);font:inherit}
+input::placeholder{color:#64748B}
+textarea{width:100%;background:var(--code)!important;color:#E2E8F0!important;border:1px solid #334155!important;border-radius:12px;padding:12px;font-family:var(--mono)}
+button:not(.tab):not(.btn){min-height:44px;padding:0 16px;border-radius:10px;border:1px solid #334155;background:var(--surface);color:var(--fg);font:600 15px/1 var(--sans);cursor:pointer}button:not(.tab):not(.btn):hover{border-color:var(--accent)}button[disabled]{opacity:.55;cursor:not-allowed}
+input[type=radio],input[type=checkbox]{width:auto;min-height:0;accent-color:var(--accent)}
+.prose label{font-weight:500}
 .row{display:flex;gap:12px;flex-wrap:wrap}.row>div{flex:1 1 160px}
+.status{min-height:24px;margin-top:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.grid3 .card,.grid2 .card{margin:0}
+.num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.5);color:#BFDBFE;font:700 14px var(--sans);margin-bottom:10px}
+.kind{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;margin-bottom:8px}
+.kind.detect{color:#FCA5A5;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.35)}.kind.support{color:#6EE7B7;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.35)}
+.icon{width:40px;height:40px;margin-bottom:10px}
+.price{font-size:40px;font-weight:700;color:var(--fg);letter-spacing:-.025em;margin:4px 0 8px}.price small{font-size:15px;font-weight:500;color:var(--body)}
+.ticks{list-style:none;padding:0;margin:12px 0}.ticks li{padding-left:26px;position:relative;margin:7px 0}.ticks li:before{content:"";position:absolute;left:0;top:.45em;width:14px;height:8px;border-left:2px solid var(--green);border-bottom:2px solid var(--green);transform:rotate(-45deg)}
+.strip{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;color:var(--body);font-size:14px;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:34px}
+.strip b{color:var(--fg);font-weight:600}
+details{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:0 16px;margin:10px 0}details summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:var(--fg);font-weight:600}
+details[open]{padding-bottom:10px}
+.site-footer{margin-top:72px;border-top:1px solid var(--line);padding:32px 0 48px;font-size:14px}
+.foot{display:flex;flex-wrap:wrap;gap:24px 56px;justify-content:space-between}.foot ul{list-style:none;padding:0;margin:8px 0 0}.foot li{margin:0}.foot a{display:inline-block;padding:8px 0;min-height:44px}
+.foot h4{color:var(--fg);margin:0;font-size:14px}
+.prose{max-width:860px;margin:0 auto;padding:32px 20px 0}.prose h1{margin-bottom:14px}.prose h2{margin:36px 0 10px}.prose h3{margin:22px 0 8px}
+.prose ul,.prose ol{padding-left:22px;max-width:70ch}.prose li{margin:6px 0}.prose .tw table{min-width:560px}
+.crumbs{font-size:14px;margin-bottom:10px}
+.fixture-banner{border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.08);color:#FDE68A;border-radius:10px;padding:8px 12px;font-size:14px}
+@media (max-width:900px){.hero-grid{grid-template-columns:1fr;gap:28px}.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.hero{padding-top:28px}}
+@media (max-width:560px){.wrap{padding:0 16px}.nav a{padding:0 8px;font-size:14px}.ci-card{font-size:12px}.ci-tag{min-width:78px}.cta-row .btn{width:100%}.nav a.btn{margin-left:0}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<main>
-<header>
-  <h1>MarketCart CI</h1>
-  <p>A release check for Shopify stores on Dawn-family themes and Horizon 4.4. It adds an item in a real browser, then compares the cart Shopify <em>stored</em> (<code>/cart.js</code>) with what the shopper <em>sees</em>: line items, variant, quantity, line price, market currency, badge and total. The result is JSON plus an exit code, so a theme deploy fails before shoppers find the bug.</p>
-  <p><span class="pill">Open source CLI + GitHub Action</span><span class="pill">Hosted: EUR 19 / 100 cases</span><span class="pill">Dawn family + Horizon 4.4</span> <a href="https://github.com/paolomangiadev/marketcart-ci" id="repo-link">Repository</a> · <a href="/llms.txt">llms.txt</a> · Guides: <a href="/guides/shopify-dawn-cart-drawer-not-updating/">Dawn drawer not updating</a>, <a href="/guides/shopify-horizon-playwright-test/">Horizon Playwright test</a>, <a href="/guides/shopify-cart-js-422-429-test/">cart.js 422 vs 429</a>, <a href="/guides/shopify-markets-currency-mismatch-cart-total-test/">Markets currency mismatch</a>, <a href="/guides/shopify-ajax-cart-drawer-web-components-playwright/">drawer web components</a>, <a href="/guides/shopify-theme-check-vs-playwright-cart-e2e/">Theme Check vs E2E</a>, <a href="/guides/github-actions-shopify-preview-theme-e2e/">preview-theme CI</a> · <a href="/tools/github-action-generator/">Workflow generator</a></p>
-</header>
-
-<section id="demo" aria-labelledby="demo-h">
-  <h2 id="demo-h">Run the seeded demo now</h2>
-  <p>Three cases against our <strong>synthetic fixture</strong> (a mock store with Dawn-style markup and planted defects), executed live by the hosted engine: a healthy cart, a stale drawer, and a live-vs-candidate pair where the candidate regressed. Results are cached for 10 minutes.</p>
-  <div class="card"><button id="run-demo" type="button">Run demo</button> <span id="demo-status" class="muted"></span>
-  <div class="tw"><table id="demo-table" hidden><thead><tr><th>Case</th><th>Expected</th><th>Result</th><th>Why</th></tr></thead><tbody></tbody></table></div></div>
-</section>
-
-<section id="free-check" aria-labelledby="free-h">
-  <h2 id="free-h">Check your own store (one free case)</h2>
-  <div class="card">
-    <p>1. Get your verification tag and paste it into <em>Online Store › Themes › Edit code › layout/theme.liquid</em>, inside <code>&lt;head&gt;</code>. This proves you control the store; we only test stores that carry it.</p>
-    <div class="row"><div><label for="fc-host">Store host</label><input id="fc-host" placeholder="your-store.myshopify.com" autocomplete="off"></div></div>
-    <p><button id="fc-token" type="button">Get my tag</button></p><pre id="fc-meta" hidden></pre>
-    <p>2. Pick one product variant to test.</p>
-    <div class="row">
-      <div><label for="fc-url">Product URL</label><input id="fc-url" placeholder="https://your-store.myshopify.com/products/tee?variant=123"></div>
-      <div><label for="fc-variant">Variant ID</label><input id="fc-variant" inputmode="numeric" placeholder="123"></div>
-      <div><label for="fc-qty">Quantity</label><input id="fc-qty" inputmode="numeric" value="1"></div>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="/" aria-label="MarketCart CI home"><svg class="logo" viewBox="0 0 32 32" width="28" height="28" role="img" aria-label="MarketCart CI logo"><rect width="32" height="32" rx="8" fill="#111827" stroke="#3B82F6" stroke-opacity=".5"/><path d="M7 9h3l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h8.1a1.5 1.5 0 0 0 1.45-1.1L25 12H11.2" fill="none" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="24.2" r="1.7" fill="#3B82F6"/><circle cx="22" cy="24.2" r="1.7" fill="#10B981"/></svg><span>MarketCart CI</span></a>
+  <nav class="nav" aria-label="Main">
+    <a href="/#playground">Live Checker</a>
+    <a href="/tools/github-action-generator/">Action Generator</a>
+    <a href="/#guides">Guides</a>
+    <a href="/benchmarks/">Benchmarks</a>
+    <a href="https://github.com/paolomangiadev/marketcart-ci">GitHub</a>
+    <a class="btn" href="https://payhip.com/buy?s=1&amp;cart_links%5B%5D=er1iY&amp;qty%5Ber1iY%5D=1" data-buy rel="noopener">Get 100 Checks — €19</a>
+  </nav>
+</div></header>
+<main id="top">
+<section class="hero"><div class="wrap hero-grid">
+  <div>
+    <span class="pill badge">v0.2.1 · Dawn 15/16 &amp; Horizon 4.4</span>
+    <h1 style="margin-top:16px">Catch Silent Shopify Cart &amp; Drawer Bugs <span>Before Your Customers Do</span></h1>
+    <p class="lead" style="margin-top:16px">Real Chromium/Playwright checks for Dawn and Horizon themes. MarketCart CI adds a product the way a shopper does (the theme's own add-to-cart, which calls <code>/cart/add.js</code>), reads the stored cart from <code>/cart.js</code>, then compares it with what the cart drawer or cart page actually shows, in CI, before you publish.</p>
+    <div class="cta-row">
+      <a class="btn" href="#playground" data-tab-link="own">Try Free Live Check ↓</a>
+      <a class="btn secondary" href="/tools/github-action-generator/">Copy GitHub Action</a>
+      <a class="btn ghost" href="#playground" data-tab-link="demo">Run sample demo</a>
     </div>
-    <div class="row">
-      <div><label for="fc-country">Market country</label><input id="fc-country" value="US" maxlength="2"></div>
-      <div><label for="fc-currency">Market currency</label><input id="fc-currency" value="USD" maxlength="3"></div>
-      <div><label for="fc-pw">Storefront password (only if the store is password-protected)</label><input id="fc-pw" type="password" autocomplete="off"></div>
-    </div>
-    <p><button id="fc-run" type="button">Run free check</button> <span id="fc-status" class="muted"></span></p>
-    <pre id="fc-out" hidden></pre>
-    <p class="muted">The password is sent over HTTPS for this one run, used in memory and never stored or logged. Inconclusive results (BLOCKED, UNSUPPORTED, ERROR) do not use up your free case. Free checks stop for the day when the shared free budget is used.</p>
+    <p class="cta-note muted">The sample demo is one click, no signup. The free own-store run needs a verification tag in your theme.</p>
   </div>
+  <div class="visual" role="group" aria-label="Illustrative CI result">
+    <div class="vlabel"><span>Illustrative CI result</span><span>not a customer screenshot</span></div>
+    <div class="mini-store"><svg viewBox="0 0 360 214" width="100%" role="img" aria-label="A cart drawer showing Linen Shirt in size S with a Checkout button, compared with the stored cart that says variant M">
+      <rect x="0" y="0" width="360" height="152" rx="12" fill="#111827" stroke="#1F2937"/><rect x="0" y="0" width="360" height="40" rx="12" fill="#1E293B"/><rect x="0" y="28" width="360" height="12" fill="#1E293B"/>
+      <text x="16" y="26" font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="700" fill="#F8FAFC">Your cart (1)</text>
+      <rect x="16" y="54" width="56" height="56" rx="8" fill="#334155"/><text x="86" y="72" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="600" fill="#F8FAFC">Linen Shirt</text>
+      <rect x="84" y="82" width="62" height="24" rx="8" fill="#F87171" fill-opacity=".1" stroke="#F87171" stroke-opacity=".7"/><text x="94" y="99" font-family="Inter,system-ui,sans-serif" font-size="14" fill="#FCA5A5">Size S</text>
+      <text x="344" y="72" text-anchor="end" font-family="Inter,system-ui,sans-serif" font-size="15" fill="#F8FAFC">€24.00</text>
+      <rect x="16" y="120" width="328" height="22" rx="8" fill="#2563EB"/><text x="180" y="136" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="600" fill="#fff">Checkout</text>
+      <path d="M180 156v18M174 168l6 7 6-7" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><text x="194" y="170" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#94A3B8">compared with</text>
+      <rect x="0" y="180" width="360" height="32" rx="10" fill="#0B1220" stroke="#10B981" stroke-opacity=".6"/><text x="14" y="201" font-family="ui-monospace,Consolas,monospace" font-size="13" fill="#6EE7B7">/cart.js stored: variant M, qty 1</text>
+    </svg></div>
+    <div class="ci-card">
+      <div class="ci-row"><span class="ci-tag PASS">PASS</span><span class="ci-note">C01 · healthy drawer: stored == visible</span></div>
+      <div class="ci-row"><span class="ci-tag REGRESSION">REGRESSION</span><span class="ci-note">— variant M stored, drawer still shows S</span></div>
+      <span class="deploy">Deploy blocked</span>
+    </div>
+  </div>
+</div>
+<div class="wrap"><div class="strip"><b>Built on</b><span>Shopify themes (Dawn, Horizon)</span><span>Playwright / Chromium</span><span>GitHub Actions</span><span>Open-source CLI (MIT)</span></div></div>
 </section>
 
-<section id="pricing" aria-labelledby="price-h">
+<section class="section" id="playground" aria-labelledby="pg-h"><span id="demo"></span><span id="free-check"></span><div class="wrap">
+  <h2 id="pg-h">Run it now: a sample store or your own</h2>
+  <p class="lead">Start with the one-click demo, or check one product on your own store for free.</p>
+  <div class="card glow" id="pg-card">
+    <div class="tabs" role="tablist" aria-label="Checker mode">
+      <button type="button" class="tab" role="tab" id="tab-demo" aria-selected="true" aria-controls="panel-demo" data-tab="demo">Run Demo (Catches Stale Drawer)</button>
+      <button type="button" class="tab" role="tab" id="tab-own" aria-selected="false" aria-controls="panel-own" tabindex="-1" data-tab="own">Check My Own Shopify Store (1 Free Run)</button>
+    </div>
+    <div class="panel" id="panel-demo" role="tabpanel" aria-labelledby="tab-demo">
+      <p><span class="pill">Interactive example</span> <span class="pill">Demo uses a sample store</span></p>
+      <p>Three cases run live in a real browser: a healthy cart, a stale drawer, and a live-vs-candidate pair where the candidate regressed. Results are cached for 10 minutes.</p>
+      <p><button id="run-demo" class="btn" type="button">Run demo</button> <span id="demo-status" class="status muted" role="status" aria-live="polite"></span></p>
+      <div class="tw"><table id="demo-table" hidden><thead><tr><th>Case</th><th>Expected</th><th>Result</th><th>Why</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="panel" id="panel-own" role="tabpanel" aria-labelledby="tab-own" hidden>
+      <div class="steps3">
+        <div class="stepbox"><h3>1 · Enter your store domain</h3>
+          <label for="fc-host">Store host</label><input id="fc-host" placeholder="your-store.myshopify.com" autocomplete="off">
+          <p style="margin-top:12px"><button id="fc-token" class="btn secondary" type="button">Get my tag</button> <button id="fc-copy" type="button" hidden>Copy tag</button></p>
+          <pre id="fc-meta" hidden></pre></div>
+        <div class="stepbox"><h3>2 · Add the verification tag</h3>
+          <p>Paste the tag inside <code>&lt;head&gt;</code> of <em>Online Store › Themes › Edit code › layout/theme.liquid</em> and save. It proves you control the store; only stores that carry it are tested. No Shopify Admin API access is needed.</p></div>
+        <div class="stepbox"><h3>3 · Choose a variant and run</h3>
+          <div class="row"><div><label for="fc-url">Product URL</label><input id="fc-url" placeholder="https://your-store.myshopify.com/products/tee?variant=123"></div>
+          <div><label for="fc-variant">Variant ID</label><input id="fc-variant" inputmode="numeric" placeholder="123"></div>
+          <div><label for="fc-qty">Quantity</label><input id="fc-qty" inputmode="numeric" value="1"></div></div>
+          <div class="row"><div><label for="fc-country">Market country</label><input id="fc-country" value="US" maxlength="2"></div>
+          <div><label for="fc-currency">Market currency</label><input id="fc-currency" value="USD" maxlength="3"></div>
+          <div><label for="fc-pw">Storefront password (only if protected)</label><input id="fc-pw" type="password" autocomplete="off"></div></div>
+          <p style="margin-top:14px"><button id="fc-run" class="btn" type="button">Run free check</button> <span id="fc-status" class="status muted" role="status" aria-live="polite"></span></p>
+          <pre id="fc-out" hidden></pre>
+          <p class="muted small">The password is sent over HTTPS for this one run, used in memory and never stored or logged. Inconclusive results (BLOCKED, UNSUPPORTED, ERROR) do not use up your free case.</p></div>
+      </div>
+    </div>
+  </div>
+  <details><summary>What the free run and the demo do and don't cover</summary>
+    <ul class="small">
+      <li>The free own-store run covers one product on a store you verified, while the daily free budget lasts. The demo runs on a sample store with planted bugs.</li>
+      <li>Local CLI and Action demo runs are free on your own machine or runner. Hosted checks are a prepaid pack.</li>
+      <li>Tested theme markup: Dawn 15.4.1 / 16.1.1 and Horizon 4.4.0, on version-pinned sample markup. Live-verified so far: Dawn 16.1.1 cart page.</li>
+      <li>Preview themes are not live-verified: use the <a href="/guides/github-actions-shopify-preview-theme-e2e/">preview setup guide</a> and its limits. Full evidence on <a href="/benchmarks/">Benchmarks</a>.</li>
+    </ul></details>
+</div></section>
+
+<section class="section" id="how" aria-labelledby="how-h"><div class="wrap">
+  <h2 id="how-h">How it works</h2>
+  <div class="grid3" style="margin-top:18px">
+    <div class="card"><span class="num">1</span><svg viewBox="0 0 160 72" width="100%" style="max-width:220px;margin-bottom:10px" role="img" aria-hidden="true"><rect x="6" y="8" width="104" height="56" rx="8" fill="#0B1220" stroke="#334155"/><text x="16" y="30" font-family="ui-monospace,monospace" font-size="10" fill="#6EE7B7">uses: marketcart-ci</text><text x="16" y="46" font-family="ui-monospace,monospace" font-size="10" fill="#94A3B8">mode: demo</text><path d="M118 36h24M136 30l7 6-7 6" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/></svg><h3>Add it to your workflow</h3><p>Paste a short GitHub Action, or run the tested npx command locally.</p></div>
+    <div class="card"><span class="num">2</span><svg viewBox="0 0 160 72" width="100%" style="max-width:220px;margin-bottom:10px" role="img" aria-hidden="true"><rect x="6" y="10" width="64" height="52" rx="8" fill="#0B1220" stroke="#10B981" stroke-opacity=".6"/><text x="14" y="30" font-family="ui-monospace,monospace" font-size="9" fill="#6EE7B7">/cart.js</text><text x="14" y="46" font-family="ui-monospace,monospace" font-size="9" fill="#94A3B8">variant M</text><rect x="90" y="10" width="64" height="52" rx="8" fill="#0B1220" stroke="#F87171" stroke-opacity=".6"/><text x="98" y="30" font-family="ui-monospace,monospace" font-size="9" fill="#FCA5A5">drawer</text><text x="98" y="46" font-family="ui-monospace,monospace" font-size="9" fill="#94A3B8">variant S</text><path d="M74 36h12M82 31l5 5-5 5" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"/></svg><h3>It compares stored vs visible</h3><p>An isolated Chromium session adds a real variant, reads <code>/cart.js</code>, then reads what the shopper sees.</p></div>
+    <div class="card"><span class="num">3</span><svg viewBox="0 0 160 72" width="100%" style="max-width:220px;margin-bottom:10px" role="img" aria-hidden="true"><rect x="6" y="8" width="148" height="56" rx="8" fill="#0B1220" stroke="#334155"/><circle cx="26" cy="28" r="7" fill="#F87171" fill-opacity=".2" stroke="#F87171"/><path d="M23 25l6 6M29 25l-6 6" stroke="#F87171" stroke-width="2" stroke-linecap="round"/><text x="40" y="32" font-family="ui-monospace,monospace" font-size="10" fill="#FCA5A5">REGRESSION · exit 1</text><text x="16" y="52" font-family="ui-monospace,monospace" font-size="10" fill="#94A3B8">Deploy blocked</text></svg><h3>Fail the check before you deploy</h3><p>A mismatch exits non-zero with the exact difference, so a broken theme never goes live.</p></div>
+  </div>
+  <pre><code>- uses: paolomangiadev/marketcart-ci@v0.2.0
+  with:
+    mode: demo        # no account; sample store with planted bugs
+
+# or locally (Node.js 22.18+ and Git):
+npx github:paolomangiadev/marketcart-ci#v0.2.1 demo</code></pre>
+  <p class="muted">That runs the no-account sample demo. For your own store, the <a href="/tools/github-action-generator/">workflow generator</a> writes the complete workflow, including the secrets setup.</p>
+</div></section>
+
+<section class="section" id="catches" aria-labelledby="cap-h"><div class="wrap">
+  <h2 id="cap-h">What it catches</h2>
+  <p class="lead">Four kinds of bugs it detects, and two workflow features that make checking practical.</p>
+  <div class="grid3" style="margin-top:18px">
+    <div class="card"><svg class="icon" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#F87171" fill-opacity=".12" stroke="#F87171" stroke-opacity=".4"/><g fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="11" y="10" width="18" height="20" rx="3"/><path d="M15 16h10M15 21h6"/></g></svg><span class="kind detect">Detects</span><h3>Stale drawer</h3><p>The item is stored but the cart drawer still says empty or shows the old lines.</p></div>
+    <div class="card"><svg class="icon" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#F87171" fill-opacity=".12" stroke="#F87171" stroke-opacity=".4"/><g fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="20" r="3.5"/><circle cx="26" cy="20" r="3.5"/><path d="M17.5 20h5"/></g></svg><span class="kind detect">Detects</span><h3>Wrong variant</h3><p>The shopper picked Blue and the theme stored Red, or the drawer shows a different variant than the cart.</p></div>
+    <div class="card"><svg class="icon" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#F87171" fill-opacity=".12" stroke="#F87171" stroke-opacity=".4"/><g fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 27V13l8-4 8 4v14"/><path d="M16 27v-7h8v7"/></g></svg><span class="kind detect">Detects</span><h3>Quantity or stock clamp</h3><p>The drawer shows the quantity requested while the store kept fewer.</p></div>
+    <div class="card"><svg class="icon" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#F87171" fill-opacity=".12" stroke="#F87171" stroke-opacity=".4"/><g fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="9"/><path d="M20 15v10M17 17.5h5a1.8 1.8 0 0 1 0 3.5h-4a1.8 1.8 0 0 0 0 3.5h5"/></g></svg><span class="kind detect">Detects</span><h3>Markets currency or total mismatch</h3><p>The right number with the wrong currency sign, a wrong amount, or a total that disagrees with the stored cart.</p></div>
+    <div class="card"><svg class="icon" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#10B981" fill-opacity=".12" stroke="#10B981" stroke-opacity=".4"/><g fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="12" y="19" width="16" height="11" rx="3"/><path d="M15 19v-4a5 5 0 0 1 10 0v4"/></g></svg><span class="kind support">Workflow support</span><h3>Password-protected dev stores</h3><p>Checks development stores behind a storefront password. Preview-theme setup has its own <a href="/guides/github-actions-shopify-preview-theme-e2e/">guide with limits</a>.</p></div>
+    <div class="card"><svg class="icon" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#10B981" fill-opacity=".12" stroke="#10B981" stroke-opacity=".4"/><g fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 28l6-8 5 4 6-12"/><path d="M12 12v16h17"/></g></svg><span class="kind support">Workflow support</span><h3>HTTP 429 pacing</h3><p>Spaces requests per store, honours Retry-After and retries once. It reduces throttling; it can't promise it never happens, and a throttled case is reported as BLOCKED, never PASS.</p></div>
+  </div>
+  <p style="margin-top:16px" class="muted">Evidence for the 20 benchmark cases is on <a href="/benchmarks/">Benchmarks</a>.</p>
+</div></section>
+
+<section class="section" id="guides" aria-labelledby="guides-h"><div class="wrap">
+  <h2 id="guides-h">Guides</h2>
+  <div class="grid2" style="margin-top:18px">
+    <a class="card" href="/guides/shopify-dawn-cart-drawer-not-updating/" style="text-decoration:none;display:block"><h3>Shopify Dawn cart drawer not updating: CI test against /cart.js</h3><p class="muted small" style="margin:8px 0 0">Why the Dawn cart drawer can show an empty or stale cart while /cart.js has the item, a minimal Playwright check, tested versions and a GitHub Action to catch it on every theme change.</p></a>
+    <a class="card" href="/guides/shopify-horizon-playwright-test/" style="text-decoration:none;display:block"><h3>Shopify Horizon theme Playwright cart test (verified adapter)</h3><p class="muted small" style="margin:8px 0 0">Horizon 4.4.0 cart selectors from the official source, a minimal Playwright script, expected output and the MarketCart CI Horizon adapter, with what is and is not verified.</p></a>
+    <a class="card" href="/guides/shopify-cart-js-422-429-test/" style="text-decoration:none;display:block"><h3>Shopify cart.js returning 422 or 429: test it without retrying the wrong thing</h3><p class="muted small" style="margin:8px 0 0">Shopify Ajax Cart API 422 Cart Error vs 429 throttling: documented error bodies, which to retry, Retry-After and backoff, and a runnable check.</p></a>
+    <a class="card" href="/guides/shopify-markets-currency-mismatch-cart-total-test/" style="text-decoration:none;display:block"><h3>Shopify Markets currency mismatch in the cart: test stored vs visible currency</h3><p class="muted small" style="margin:8px 0 0">Check that the Shopify cart.js presentment currency, the session market and the visible prices and total agree, with no conversion, and what to do when the market is not verified.</p></a>
+    <a class="card" href="/guides/shopify-ajax-cart-drawer-web-components-playwright/" style="text-decoration:none;display:block"><h3>Testing Shopify cart drawer web components with Playwright (Dawn, Horizon)</h3><p class="muted small" style="margin:8px 0 0">Dawn's &lt;cart-drawer&gt; and Horizon 4.4's &lt;theme-drawer&gt; markup, scoped selectors, waiting for the rendered drawer, a stale-drawer example and why /cart hides it.</p></a>
+    <a class="card" href="/guides/shopify-theme-check-vs-playwright-cart-e2e/" style="text-decoration:none;display:block"><h3>Shopify Theme Check vs Playwright cart E2E: what each one catches</h3><p class="muted small" style="margin:8px 0 0">Theme Check lints Liquid and JSON; a browser test sees runtime cart state. A reproducible stale-drawer case and a workflow that runs both.</p></a>
+    <a class="card" href="/guides/github-actions-shopify-preview-theme-e2e/" style="text-decoration:none;display:block"><h3>GitHub Actions: E2E cart test of a Shopify preview theme</h3><p class="muted small" style="margin:8px 0 0">Push a branch as an unpublished theme, compare its cart drawer with the live theme, secrets, ownership, idempotent jobs and pacing. Preview themes not yet live-verified.</p></a>
+  </div>
+</div></section>
+
+<section class="section" id="pricing" aria-labelledby="price-h"><div class="wrap">
   <h2 id="price-h">Pricing</h2>
-  <div class="card">
-    <p><strong>EUR 19 = 100 completed hosted cases</strong>, valid 30 days from activation. A live-vs-candidate pair uses 2 cases. Only PASS or REGRESSION results use credits; BLOCKED, UNSUPPORTED and ERROR are released. No subscription. The CLI and Action run locally for free.</p>
-    <p id="buy"><a class="btn" href="https://payhip.com/b/er1iY" rel="noopener" id="buy-link">Buy 100 cases — EUR 19</a></p>
-    <p class="muted">Sold through Payhip (seller: NorthGrid Digital). Your license key arrives automatically after payment and is checked on every job; refunds disable it.</p>
+  <div class="grid2" style="margin-top:18px">
+    <div class="card"><h3>Free Local CLI / Demo</h3><div class="price">€0</div>
+      <ul class="ticks"><li>Local runner and fixture on your own machine and browser</li><li>Open-source GitHub Action (demo and local checks)</li><li>Optional: one free hosted case on a store you verify</li></ul>
+      <a class="btn secondary" href="/tools/github-action-generator/">Copy GitHub Action</a></div>
+    <div class="card glow" id="buy"><h3>Hosted CI Pack</h3><div class="price">€19 <small>one-off</small></div>
+      <ul class="ticks"><li>100 completed hosted cases, valid 30 days from activation</li><li>No subscription; a live-vs-candidate pair uses two checks</li><li>License key delivered automatically</li></ul>
+      <p><a class="btn" id="buy-link" href="https://payhip.com/buy?s=1&amp;cart_links%5B%5D=er1iY&amp;qty%5Ber1iY%5D=1" data-buy rel="noopener">Get 100 Checks — €19</a></p>
+      <p class="muted small">Instant license key · One-time payment, no subscription · No Shopify Admin API access required. Proving store ownership still means adding one meta tag to your theme. Sold through Payhip (seller: NorthGrid Digital); refunds disable the key.</p></div>
   </div>
-</section>
+  <p class="muted small" style="margin-top:14px">For scale: PromiseCheck is a Shopify Admin monitoring app with a different scope (hourly cart checks, screenshots, alerts). Its official Shopify App Store page lists $79.99/month (read 2026-11-10, <a href="https://apps.shopify.com/promisecheck" rel="nofollow noopener">source</a>). MarketCart CI is a CI check you run per release, not a monitor.</p>
+</div></section>
 
-<section id="benchmark" aria-labelledby="bench-h">
-  <h2 id="bench-h">Benchmark: 20 cases, expected vs actual</h2>
-  <p>Run <code>bench-20261107T161307Z</code>, engine <code>0.1.0+0a4e5cee</code>: <strong>20/20</strong> classified as expected, planted regressions caught <strong>10/10</strong>, false PASS <strong>0</strong>. The expected statuses were frozen before the engine was written. These are <strong>synthetic</strong> cases (one planted defect per scenario) by the same author as the engine: they show which bug classes are detected, not how a particular live store behaves. <a href="https://github.com/paolomangiadev/marketcart-ci/blob/main/docs/BENCHMARK.md">Methodology</a> · <a href="/benchmark.json">raw JSON</a></p>
-  <div class="tw"><table><caption class="muted">Synthetic fixture: https://marketcart-fixture.pages.dev</caption><thead><tr><th scope="col">Case</th><th scope="col">Group</th><th scope="col">Planted</th><th scope="col">Expected</th><th scope="col">Actual</th><th scope="col">Engine reason</th></tr></thead><tbody>
-<tr><td>C01</td><td>healthy-baseline</td><td>Single default variant, qty 1, EUR market verified; stored == visible drawer/badge/total.</td><td>PASS</td><td class="PASS">PASS</td><td>stored == visible across 1 line(s), market IE/EUR verified in-session</td></tr>
-<tr><td>C02</td><td>healthy-baseline</td><td>Non-default variant selected via ?variant; stored and visible both Blue / M.</td><td>PASS</td><td class="PASS">PASS</td><td>stored == visible across 1 line(s), market IE/EUR verified in-session</td></tr>
-<tr><td>C03</td><td>healthy-baseline</td><td>Quantity 3; stored qty, visible qty, badge 3 and line total agree.</td><td>PASS</td><td class="PASS">PASS</td><td>stored == visible across 1 line(s), market IE/EUR verified in-session</td></tr>
-<tr><td>C04</td><td>healthy-baseline</td><td>Zero-decimal currency: JPY minor units are whole yen; ¥7,800 must equal stored 7800 without a /100 conversion.</td><td>PASS</td><td class="PASS">PASS</td><td>stored == visible across 1 line(s), market JP/JPY verified in-session</td></tr>
-<tr><td>C05</td><td>stale-visible-state</td><td>Item stored in cart but the drawer keeps its stale empty render.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>stored 1 line(s), visible 0 line(s) in drawer; stored line Linen Shirt (Red / M, variant 4101) not visible</td></tr>
-<tr><td>C06</td><td>stale-visible-state</td><td>Drawer correct, header cart badge not updated (adapter declares badge; fixture expects it).</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>stored item_count 1, badge absent</td></tr>
-<tr><td>C07</td><td>stale-visible-state</td><td>Stored qty 2, drawer shows stale qty 1.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>variant 4101: stored qty 2, visible qty 1</td></tr>
-<tr><td>C08</td><td>item-quantity-drift</td><td>Shopper selected Blue / M (4102); theme JS posts the default variant 4101.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>requested variant 4102 not in stored cart (stored: 4101); unexpected stored variant 4101</td></tr>
-<tr><td>C09</td><td>item-quantity-drift</td><td>Two items stored; drawer re-render drops the second line.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>stored 2 line(s), visible 1 line(s) in drawer; stored line Merino Socks (Default Title, variant 6301) not visible</td></tr>
-<tr><td>C10</td><td>item-quantity-drift</td><td>Server persists qty 2 (clamp) while the optimistic UI shows the requested 3.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>variant 4101: requested qty 3, stored qty 2; variant 4101: stored qty 2, visible qty 3; variant 4101: stored line 4800 EUR minor, visible 7200</td></tr>
-<tr><td>C11</td><td>currency-price</td><td>Market IE/EUR verified in-session, but the stored cart currency is USD (wrong currency).</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>stored cart currency USD, verified market currency EUR; variant 4101: visible &quot;$26.00&quot; indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market EUR; visible total &quot;$26.00&quot; indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|A</td></tr>
-<tr><td>C12</td><td>currency-price</td><td>Stored EUR 24.00; drawer shows the same number with the wrong currency ($24.00).</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>variant 4101: visible &quot;$24.00&quot; indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market EUR; visible total &quot;$24.00&quot; indicates USD|CAD|AUD|NZD|MXN|SGD|HKD|CLP|COP|ARS, market EUR</td></tr>
-<tr><td>C13</td><td>currency-price</td><td>Stored EUR 24.00; drawer shows a wrong amount (€20.00).</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>variant 4101: stored line 2400 EUR minor, visible 2000</td></tr>
-<tr><td>C14</td><td>currency-price</td><td>Equivalent localized formatting: de-DE '1.234,56 €' equals stored 123456 EUR minor units (dot = grouping, comma = decimal).</td><td>PASS</td><td class="PASS">PASS</td><td>stored == visible across 1 line(s), market DE/EUR verified in-session</td></tr>
-<tr><td>C15</td><td>live-candidate</td><td>Healthy live vs unchanged healthy candidate: both pass, observations identical. Consumes 2 cases.</td><td>PASS</td><td class="PASS">PASS</td><td>live and candidate both pass with identical stored/visible observations</td></tr>
-<tr><td>C16</td><td>live-candidate</td><td>Healthy live vs broken candidate (stale drawer). Consumes 2 cases.</td><td>REGRESSION</td><td class="REGRESSION">REGRESSION</td><td>candidate regressed (live PASS)</td></tr>
-<tr><td>C17</td><td>inconclusive</td><td>Storefront answers 429 with a bot-challenge interstitial; never PASS.</td><td>BLOCKED</td><td class="BLOCKED">BLOCKED</td><td>storefront rate limited (HTTP 429)</td></tr>
-<tr><td>C18</td><td>inconclusive</td><td>Non-Dawn theme markup: no supported adapter; never PASS.</td><td>UNSUPPORTED</td><td class="UNSUPPORTED">UNSUPPORTED</td><td>no supported adapter: theme schema &quot;Debut&quot;</td></tr>
-<tr><td>C19</td><td>inconclusive</td><td>Add-to-cart request hangs; per-case timeout fires (6 s fixture timeout, one bounded retry); never PASS.</td><td>ERROR</td><td class="ERROR">ERROR</td><td>case timeout after 6000 ms</td></tr>
-<tr><td>C20</td><td>inconclusive</td><td>Requested JP/JPY but the store keeps serving IE/EUR in-session; the market cannot be verified, even though the cart itself is internally consistent; never PASS.</td><td>UNSUPPORTED</td><td class="UNSUPPORTED">UNSUPPORTED</td><td>requested market JP/JPY not verified in-session (observed IE/EUR)</td></tr>
-  </tbody></table></div>
-</section>
-
-<section id="competitors" aria-labelledby="comp-h">
-  <h2 id="comp-h">How it compares (scoped)</h2>
-  <p>On the C05 stale-drawer and C08 wrong-variant synthetic fixtures, E-Com Checkout Auditor returned success where our parity contract expects REGRESSION. That is two synthetic cases, not a general superiority claim. PromiseCheck is a differently scoped Shopify Admin app, listed as a price anchor and not tested.</p>
-  <div class="tw"><table><thead><tr><th scope="col">Product</th><th scope="col">What it checks</th><th scope="col">Result on our fixture</th><th scope="col">Price</th><th scope="col">Evidence</th></tr></thead><tbody>
-<tr><th scope="row">MarketCart CI (this project)</th><td>Real browser; theme add-to-cart; /cart.js read independently of the DOM; drawer/cart page, badge, total, in-session market currency</td><td>C05 stale drawer: REGRESSION · C08 wrong variant: REGRESSION (20/20 synthetic cases as expected)</td><td>EUR 19 / 100 completed hosted cases (30 days); CLI free locally</td><td>EXECUTED (synthetic fixture + Founder-owned live Dawn dev store) · <a href="https://github.com/paolomangiadev/marketcart-ci" rel="nofollow noopener">source</a></td></tr>
-<tr><th scope="row">E-Com Checkout Auditor (Apify Actor)</th><td>Browser journey product → cart → checkout page, pass/fail per phase</td><td>C05 stale drawer: returned success (run nv2AeksMAjnh2ksTq) · C08 wrong variant: returned success (run bJKqMgPGZy7PxTBJq). Our parity contract expects REGRESSION for both. n = 2 synthetic cases</td><td>USD 0.05 per result (Apify Store, 2026-11-06)</td><td>EXECUTED n=2 on our synthetic fixture · <a href="https://apify.com/solutionssmart/e-com-checkout-auditor" rel="nofollow noopener">source</a></td></tr>
-<tr><th scope="row">Shopify Variant Cartability Checker (Apify Actor)</th><td>Ajax cart API transaction path (/products/x.js, /cart/add.js); never reads the rendered drawer by design</td><td>Inconclusive: our path-prefixed fixture is incompatible with root-relative tools (runs bs9d3gdsxiMNjjmig, fv8KT7HOpo32sX8cB)</td><td>USD 0.005 per result (2026-11-06)</td><td>EXECUTED, inconclusive (fixture limitation) · <a href="https://apify.com/silver-rook-labs/shopify-variant-cartability-checker" rel="nofollow noopener">source</a></td></tr>
-<tr><th scope="row">PromiseCheck: Cart Monitoring (Shopify app)</th><td>Add to Cart, options and cart quantities on desktop/mobile; draft-theme vs saved live scan; hourly checks; screenshots, alerts</td><td>Not tested (differently scoped Shopify Admin app; price anchor only)</td><td>USD 79.99 / month, 14-day trial (listing read 2026-11-07)</td><td>DOCUMENTED, UNTESTED · <a href="https://apps.shopify.com/promisecheck" rel="nofollow noopener">source</a></td></tr>
-<tr><th scope="row">StoreCheck Markets (Shopify app)</th><td>Live cart checks per market: availability, currency, totals, quantities, discounts</td><td>Not tested</td><td>Free manual / USD 9.99 per month automated (listing read 2026-11-06)</td><td>DOCUMENTED, UNTESTED · <a href="https://apps.shopify.com/storecheck-markets" rel="nofollow noopener">source</a></td></tr>
-  </tbody></table></div>
-</section>
-
-<section id="faq" aria-labelledby="faq-h">
+<section class="section" id="faq" aria-labelledby="faq-h"><div class="wrap">
   <h2 id="faq-h">FAQ</h2>
-  <h3>Why does the Dawn cart drawer show an empty or stale cart while /cart.js already has the item?</h3>
-  <p>Dawn's product form posts to /cart/add.js and asks Shopify to return the re-rendered cart drawer and cart icon sections in the same response; the drawer then swaps in that HTML. If a customization, an app script or a missing section breaks that swap, Shopify has stored the item (it is in /cart.js) but the shopper still sees the old drawer and badge. MarketCart CI reads /cart.js independently of the page and compares it with what the drawer shows; any difference is a REGRESSION with the exact mismatch.</p>
-  <h3>How do I catch a Shopify Markets currency mismatch in the cart?</h3>
-  <p>Check three things in the same browser session: the market Shopify actually served (window.Shopify.country and window.Shopify.currency.active), the stored cart currency in /cart.js, and the currency shown next to every visible price and the total. They must agree, with no conversion applied. MarketCart CI does exactly that; if the session never gets the requested market, the result is UNSUPPORTED rather than a PASS you cannot trust.</p>
-  <h3>How can I run cart regression tests in CI before publishing a Shopify theme?</h3>
-  <p>Run the open-source MarketCart CI CLI or GitHub Action on every theme change. Describe cases as JSON (product URL, variant, quantity, market), optionally as a pair: the published theme versus an unpublished theme preview. The job exits 0 on PASS, 1 on REGRESSION and 2 when a case is inconclusive, so a failing cart blocks the deploy. Local runs are free; hosted runs use prepaid case credits.</p>
-</section>
+  <details><summary>Why does the Dawn cart drawer show an empty or stale cart while /cart.js already has the item?</summary><p>Dawn's product form posts to /cart/add.js and asks Shopify to return the re-rendered cart drawer and cart icon sections in the same response; the drawer then swaps in that HTML. If a customization, an app script or a missing section breaks that swap, Shopify has stored the item (it is in /cart.js) but the shopper still sees the old drawer and badge. MarketCart CI reads /cart.js independently of the page and compares it with what the drawer shows; any difference is a REGRESSION with the exact mismatch.</p></details>
+  <details><summary>How do I catch a Shopify Markets currency mismatch in the cart?</summary><p>Check three things in the same browser session: the market Shopify actually served (window.Shopify.country and window.Shopify.currency.active), the stored cart currency in /cart.js, and the currency shown next to every visible price and the total. They must agree, with no conversion applied. MarketCart CI does exactly that; if the session never gets the requested market, the result is UNSUPPORTED rather than a PASS you cannot trust.</p></details>
+  <details><summary>How can I run cart regression tests in CI before publishing a Shopify theme?</summary><p>Run the open-source MarketCart CI CLI or GitHub Action on every theme change. Describe cases as JSON (product URL, variant, quantity, market), optionally as a pair: the published theme versus an unpublished theme preview. The job exits 0 on PASS, 1 on REGRESSION and 2 when a case is inconclusive, so a failing cart blocks the deploy. Local runs are free; hosted runs use prepaid case credits.</p></details>
+  <details><summary>What do I need before running a check, and what does the free run cover?</summary><p>The free own-store run needs a verification meta tag in your theme head (it proves you control the store) and covers one product on a verified store while the daily free budget lasts. The sample demo runs on a synthetic store with planted bugs. Local CLI and Action demo runs are free on your own machine; hosted checks are a prepaid pack of 100 completed cases valid 30 days from activation. Supported markup: Dawn 15/16 and Horizon 4.4; live-verified so far on a Dawn 16.1.1 cart page, and preview themes are not live-verified.</p></details>
+</div></section>
 
-<section id="limits" aria-labelledby="lim-h">
-  <h2 id="lim-h">Limits, stated plainly</h2>
-  <ul>
-    <li>Themes: Dawn family and Horizon 4.4.0. Live-verified so far: Dawn 16.1.1 on the cart page. Dawn drawer and Horizon (drawer and page) are verified on version-pinned synthetic markup only; live verification is pending. Other themes return UNSUPPORTED, never PASS.</li>
-    <li>A theme with a cart drawer is tested on the drawer; a closed or stale drawer is never replaced by the (fresh) cart page.</li>
-    <li>Hosted runs pace each store (15 s between cart cycles, Retry-After honoured, one retry). A job that cannot start a case within about 4.5 minutes returns that case as BLOCKED (queued) and releases its credit.</li>
-    <li>Never opens checkout, never submits payment, never logs in, no anti-bot evasion. Bot challenges and HTTP 429 return BLOCKED.</li>
-    <li>The market is verified inside the session; no currency conversion is ever applied. Zero-decimal currencies rely on Shopify's ×100 Ajax convention, verified on synthetic data only.</li>
-    <li>Shopify still rate-limits rapid cart traffic; pacing reduces it but cannot promise it never happens. Concurrency 1 in hosted mode.</li>
-  </ul>
-</section>
-<footer class="muted"><p>Updated 2026-11-07. <a href="/llms-full.txt">llms-full.txt</a> · <a href="https://github.com/paolomangiadev/marketcart-ci">Source</a></p></footer>
+<section class="section"><div class="wrap"><div class="card glow" style="text-align:center;padding:36px 20px">
+  <h2>Stop finding cart bugs from customers</h2>
+  <p style="margin:12px auto 20px">Run the sample demo in one click, or put the check in your pipeline today.</p>
+  <div class="cta-row" style="justify-content:center"><a class="btn" href="#playground" data-tab-link="own">Try Free Live Check ↓</a><a class="btn secondary" href="/tools/github-action-generator/">Copy GitHub Action</a><a class="btn ghost" href="https://payhip.com/buy?s=1&amp;cart_links%5B%5D=er1iY&amp;qty%5Ber1iY%5D=1" data-buy rel="noopener">Get 100 Checks — €19</a></div>
+</div></div></section>
 </main>
-<script src="config.js"></script>
-<script src="app.js"></script>
+<footer class="site-footer"><div class="wrap"><div class="foot">
+  <div><a class="brand" href="/"><svg class="logo" viewBox="0 0 32 32" width="28" height="28" role="img" aria-label="MarketCart CI logo"><rect width="32" height="32" rx="8" fill="#111827" stroke="#3B82F6" stroke-opacity=".5"/><path d="M7 9h3l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h8.1a1.5 1.5 0 0 0 1.45-1.1L25 12H11.2" fill="none" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="24.2" r="1.7" fill="#3B82F6"/><circle cx="22" cy="24.2" r="1.7" fill="#10B981"/></svg><span>MarketCart CI</span></a><p class="muted small" style="margin-top:6px">Cart parity checks for Shopify themes.<br>Open-source CLI and GitHub Action (MIT). Updated 2026-11-10.</p></div>
+  <div><h4>Product</h4><ul><li><a href="/#playground">Live Checker</a></li><li><a href="/tools/github-action-generator/">Action Generator</a></li><li><a href="/benchmarks/">Benchmarks</a></li><li><a href="https://payhip.com/buy?s=1&amp;cart_links%5B%5D=er1iY&amp;qty%5Ber1iY%5D=1" data-buy rel="noopener">Get 100 Checks — €19</a></li></ul></div>
+  <div><h4>Learn</h4><ul><li><a href="/#guides">Guides</a></li><li><a href="/guides/shopify-dawn-cart-drawer-not-updating/">Dawn drawer not updating</a></li><li><a href="/guides/shopify-cart-js-422-429-test/">cart.js 422 vs 429</a></li></ul></div>
+  <div><h4>Open source</h4><ul><li><a href="https://github.com/paolomangiadev/marketcart-ci">GitHub</a></li><li><a href="https://github.com/paolomangiadev/marketcart-ci/releases">Releases</a></li><li><a href="https://github.com/paolomangiadev/marketcart-ci/issues">Help &amp; issues</a></li></ul></div>
+  <div><h4>Machine-readable</h4><ul><li><a href="/llms.txt">llms.txt</a></li><li><a href="/llms-full.txt">llms-full.txt</a></li><li><a href="/sitemap.xml">sitemap.xml</a></li></ul></div>
+</div></div></footer>
+<script src="/config.js"></script>
+<script src="/app.js"></script>
 </body>
 </html>

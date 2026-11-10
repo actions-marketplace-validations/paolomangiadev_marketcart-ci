@@ -106,7 +106,7 @@ Workflow generator (copy-paste GitHub Actions YAML): https://marketcart-ci.pages
 Standalone snippets (Gists): [cart drawer test workflow, Dawn + Horizon](https://gist.github.com/paolomangiadev/8df461ab021b181bd49a1ad626524f3a) · [Markets currency parity check, TypeScript](https://gist.github.com/paolomangiadev/666b9a370c2ad345370ddb3d79b28c8e)
 Checker, live demo and one free case per store: https://marketcart-ci.pages.dev/?src=github-readme · machine-readable docs: https://marketcart-ci.pages.dev/llms.txt?src=github-readme
 
-**EUR 19 = 100 completed hosted cases**, valid 30 days from activation (https://payhip.com/b/er1iY). Only `PASS`/`REGRESSION` use credits. A live/candidate pair uses 2. No subscription. The license key is delivered automatically by Payhip and verified on every job; refunds disable it. The hosted service runs the same engine in Cloudflare Browser Run with a D1 credit ledger (`service/`).
+**EUR 19 = 100 completed hosted cases**, valid 30 days from activation (https://payhip.com/buy?s=1&cart_links%5B%5D=er1iY&qty%5Ber1iY%5D=1). Only `PASS`/`REGRESSION` use credits. A live/candidate pair uses 2. No subscription. The license key is delivered automatically by Payhip and verified on every job; refunds disable it. The hosted service runs the same engine in Cloudflare Browser Run with a D1 credit ledger (`service/`).
 
 ## Benchmark (synthetic, expected vs actual)
 
@@ -142,7 +142,7 @@ Reproduce: `npm ci && npx playwright-core install chromium-headless-shell && nod
 
 ## Competitor matrix (scoped)
 
-Read 2026-11-07. "EXECUTED" means we ran the product on the same synthetic inputs; "DOCUMENTED" means only the vendor listing was read. Two executed synthetic cases do not support a broad superiority claim.
+Read 2026-11-07 (PromiseCheck price re-read 2026-11-10). "EXECUTED" means we ran the product on the same synthetic inputs; "DOCUMENTED" means only the vendor listing was read. Two executed synthetic cases do not support a broad superiority claim.
 
 | Product | What it checks | Result on our fixture | Price | Evidence |
 |---|---|---|---|---|

@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://marketcart-ci.pages.dev/</loc><lastmod>2026-11-07</lastmod></url>
-  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-dawn-cart-drawer-not-updating/</loc><lastmod>2026-11-07</lastmod></url>
-  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-horizon-playwright-test/</loc><lastmod>2026-11-07</lastmod></url>
-  <url><loc>https://marketcart-ci.pages.dev/tools/github-action-generator/</loc><lastmod>2026-11-07</lastmod></url>
-  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-cart-js-422-429-test/</loc><lastmod>2026-11-07</lastmod></url>
-  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-markets-currency-mismatch-cart-total-test/</loc><lastmod>2026-11-07</lastmod></url>
-  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-ajax-cart-drawer-web-components-playwright/</loc><lastmod>2026-11-07</lastmod></url>
-  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-theme-check-vs-playwright-cart-e2e/</loc><lastmod>2026-11-07</lastmod></url>
-  <url><loc>https://marketcart-ci.pages.dev/guides/github-actions-shopify-preview-theme-e2e/</loc><lastmod>2026-11-07</lastmod></url>
-  <url><loc>https://marketcart-ci.pages.dev/llms.txt</loc><lastmod>2026-11-07</lastmod></url>
-  <url><loc>https://marketcart-ci.pages.dev/llms-full.txt</loc><lastmod>2026-11-07</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/benchmarks/</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-dawn-cart-drawer-not-updating/</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-horizon-playwright-test/</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/tools/github-action-generator/</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-cart-js-422-429-test/</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-markets-currency-mismatch-cart-total-test/</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-ajax-cart-drawer-web-components-playwright/</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/guides/shopify-theme-check-vs-playwright-cart-e2e/</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/guides/github-actions-shopify-preview-theme-e2e/</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/llms.txt</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://marketcart-ci.pages.dev/llms-full.txt</loc><lastmod>2026-11-10</lastmod></url>
 </urlset>

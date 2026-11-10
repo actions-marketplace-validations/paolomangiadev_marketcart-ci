@@ -5,8 +5,7 @@
 ## Docs
 - [Full text for LLMs](https://marketcart-ci.pages.dev/llms-full.txt): architecture, CLI/Action usage, JSON input/output, limits, pricing
 - [Repository and quickstart](https://github.com/paolomangiadev/marketcart-ci)
-- [Benchmark: 20 cases expected vs actual](https://marketcart-ci.pages.dev/#benchmark)
-- [Competitor matrix](https://marketcart-ci.pages.dev/#competitors)
+- [Benchmarks: 20 cases expected vs actual, competitor matrix, coverage and limits](https://marketcart-ci.pages.dev/benchmarks/)
 - [Guide: Shopify Dawn cart drawer not updating — CI test against /cart.js](https://marketcart-ci.pages.dev/guides/shopify-dawn-cart-drawer-not-updating/)
 - [Guide: Shopify Horizon theme Playwright cart test](https://marketcart-ci.pages.dev/guides/shopify-horizon-playwright-test/)
 - [Guide: Shopify cart.js 422 vs 429 — what to retry in a cart test](https://marketcart-ci.pages.dev/guides/shopify-cart-js-422-429-test/)
@@ -18,7 +17,7 @@
 - Quickstart without cloning (Node.js 22.18+ and Git): `npx github:paolomangiadev/marketcart-ci#v0.2.1 setup-browser`, then `npx github:paolomangiadev/marketcart-ci#v0.2.1 demo`
 
 ## Product
-- [Buy 100 hosted cases (EUR 19)](https://payhip.com/b/er1iY)
+- [Buy 100 hosted cases (EUR 19)](https://payhip.com/buy?s=1&cart_links%5B%5D=er1iY&qty%5Ber1iY%5D=1)
 - [Hosted API health](https://marketcart-ci.pages.dev/v1/health)
 
 ## Optional
